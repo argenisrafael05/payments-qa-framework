@@ -1,0 +1,20 @@
+services:
+  mysql:
+    image: mysql:9.7.4
+    env_file:
+      - path: .env.example
+      - path: .env
+        required: false
+    ports:
+      - "${MYSQL_PORT:-3307}:3306"
+    volumes:
+      - ./docker/mysql:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'mysqladmin ping -h 127.0.0.1 -uroot -p"$$MYSQL_ROOT_PASSWORD" --silent',
+        ]
+      interval: 2s
+      timeout: 5s
+      retries: 30
