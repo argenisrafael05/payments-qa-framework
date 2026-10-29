@@ -7,7 +7,7 @@ import { expectationOf, type CaseEntry } from "./catalog.ts";
 import { createContext, type PaymentContext } from "./context.ts";
 import { extraChecks } from "./database/checks.ts";
 import { finalCheck } from "./database/final-check.ts";
-import { paymentFlow } from "./flows/payment.ts";
+import { flowOf } from "./flows/payment.ts";
 import type { RunSetup } from "./run-setup.ts";
 
 export type Execution = {
@@ -32,8 +32,13 @@ export function executeCase(options: {
     case: entry.case,
   });
 
-  if (entry.case.blocked !== undefined) {
-    const record = recorder.notRun(`blocked: ${entry.case.blocked}`);
+  const notRun =
+    entry.notApplicable ??
+    (entry.case.blocked === undefined
+      ? undefined
+      : `blocked: ${entry.case.blocked}`);
+  if (notRun !== undefined) {
+    const record = recorder.notRun(notRun);
     return {
       done: Promise.resolve(record),
       finished: true,
@@ -46,10 +51,15 @@ export function executeCase(options: {
       transport: options.transport,
       baseUrl: run.environment.payrefUrl,
       recorder,
+      testTime: entry.case.time,
     }),
     db: options.db,
     environment: run.environment,
-    reference: entry.case.reference,
+    reference: entry.reference,
+    code: entry.code,
+    amount: entry.amount,
+    secondAmount: entry.case.secondAmount,
+    secondSequence: entry.secondSequence,
     integration: run.integration.id,
   });
   const plan = planFor(entry, run);
@@ -64,7 +74,7 @@ export function executeCase(options: {
 
 // The flow up to the step where the case ends, and the checks it asks for.
 function planFor(entry: CaseEntry, run: RunSetup): CasePlan<PaymentContext> {
-  const flow = paymentFlow(run.integration);
+  const flow = flowOf(entry.case.flow, run.integration);
   const objective = flow.findIndex((step) =>
     step.covers.includes(entry.case.objective.step),
   );

@@ -6,6 +6,7 @@ export type NewReference = {
   type: "single" | "recurring";
   amountType: "fixed" | "open";
   amount?: number;
+  expiresOn?: string;
 };
 
 // The merchant's side of the core contract, the same for every integration. Like a

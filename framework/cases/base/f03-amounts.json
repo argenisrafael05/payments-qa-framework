@@ -1,0 +1,69 @@
+[
+  {
+    "id": "F03-01",
+    "title": "A fixed reference only takes its exact amount",
+    "flow": "payment",
+    "reference": {
+      "type": ["single", "recurring"],
+      "amountType": "fixed",
+      "expiresOn": [null, "2099-12-31"],
+      "amount": 150.5
+    },
+    "amount": [150.49, 150.51],
+    "objective": { "step": "request", "expect": "R-104" },
+    "tags": ["hu-02", "hu-08"]
+  },
+  {
+    "id": "F03-02",
+    "title": "An open reference takes the limits of the payment method",
+    "flow": "payment",
+    "reference": {
+      "type": ["single", "recurring"],
+      "amountType": "open",
+      "expiresOn": [null, "2099-12-31"]
+    },
+    "amount": [1, 10000],
+    "objective": { "step": "notice", "expect": "OK" },
+    "tags": ["hu-02", "hu-08"]
+  },
+  {
+    "id": "F03-03",
+    "title": "An open reference rejects an amount outside the limits of the payment method",
+    "flow": "payment",
+    "reference": {
+      "type": ["single", "recurring"],
+      "amountType": "open",
+      "expiresOn": [null, "2099-12-31"]
+    },
+    "amount": [0.99, 10000.01],
+    "objective": { "step": "request", "expect": "R-104" },
+    "tags": ["hu-02", "hu-08"]
+  },
+  {
+    "id": "F03-04",
+    "title": "A zero or negative amount is rejected",
+    "flow": "payment",
+    "reference": {
+      "type": ["single", "recurring"],
+      "amountType": "open",
+      "expiresOn": [null, "2099-12-31"]
+    },
+    "amount": [0, -1],
+    "objective": { "step": "request", "expect": "R-104" },
+    "tags": ["hu-02", "hu-08"]
+  },
+  {
+    "id": "F03-05",
+    "title": "An amount with more decimals than its region is rejected, never rounded",
+    "flow": "payment",
+    "reference": {
+      "type": ["single", "recurring"],
+      "amountType": "open",
+      "expiresOn": [null, "2099-12-31"]
+    },
+    "amount": [150.505],
+    "objective": { "step": "request", "expect": "R-104" },
+    "tags": ["hu-02", "hu-08"],
+    "notes": "PayRef 1.0 rounds it and accepts it: that is its bug 2."
+  }
+]

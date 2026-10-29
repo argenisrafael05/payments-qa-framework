@@ -4,5 +4,9 @@
   "region": "mx",
   "contract": "standard",
   "notice": "together",
-  "paymentMethod": { "id": "supermarket", "keyEnv": "MX_SUPERMARKET_KEY" }
+  "inquiry": true,
+  "paymentMethod": {
+    "id": "supermarket",
+    "keyEnv": "MX_SUPERMARKET_KEY"
+  }
 }

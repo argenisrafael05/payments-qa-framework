@@ -44,9 +44,16 @@ export function compareMovements(
       differences.push(`${payment.folio} is not in the database`);
       continue;
     }
+    if (movement.status !== "confirmed") {
+      differences.push(`${payment.folio} is ${movement.status}, not confirmed`);
+    }
+    // The exact amount: comparing with two decimals would hide an amount the database rounded.
+    if (Number(movement.amount) !== payment.amount) {
+      differences.push(
+        `${payment.folio} has amount ${movement.amount}, and the API confirmed ${payment.amount}`,
+      );
+    }
     const expected = {
-      status: "confirmed",
-      amount: payment.amount.toFixed(2),
       paymentMethodId: payment.paymentMethodId,
       authorization: payment.authorization,
       sequence: payment.sequence,

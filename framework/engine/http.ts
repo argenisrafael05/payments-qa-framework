@@ -67,6 +67,7 @@ export class Http {
   readonly #recorder: Recorder;
   readonly #maxAttempts: number;
   readonly #retryDelayMs: number;
+  readonly #testTime: string | undefined;
 
   constructor(options: {
     transport: Transport;
@@ -74,12 +75,15 @@ export class Http {
     recorder: Recorder;
     maxAttempts?: number;
     retryDelayMs?: number;
+    // The time the case fixes, sent with every call. It stays visible in the evidence.
+    testTime?: string;
   }) {
     this.#transport = options.transport;
     this.#baseUrl = options.baseUrl;
     this.#recorder = options.recorder;
     this.#maxAttempts = options.maxAttempts ?? 3;
     this.#retryDelayMs = options.retryDelayMs ?? 250;
+    this.#testTime = options.testTime;
   }
 
   async call(template: OperationTemplate, call: Call): Promise<Exchange> {
@@ -90,6 +94,9 @@ export class Http {
     };
     if (call.token !== undefined) {
       request.headers.authorization = `Bearer ${call.token}`;
+    }
+    if (this.#testTime !== undefined) {
+      request.headers["x-test-time"] = this.#testTime;
     }
     if (call.body !== undefined) {
       request.headers["content-type"] = "application/json";

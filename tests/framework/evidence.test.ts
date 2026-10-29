@@ -98,6 +98,31 @@ describe("the evidence", () => {
     });
   });
 
+  it("sends the time the case fixes with every call, and keeps it visible", async () => {
+    const directory = temporaryDirectory();
+    const recorder = recorderIn(directory);
+    const transport = scripted([reply(200, { code: "OK" })]);
+    const http = new Http({
+      transport,
+      baseUrl: "http://payref.test",
+      recorder,
+      testTime: "2026-11-15T23:59:59-06:00",
+    });
+    recorder.plan(
+      [{ name: "inquiry", title: "Inquiry", kind: "executes" }],
+      [],
+    );
+    recorder.beginStep(0);
+    await http.call(coreApi.inquiry, { method: "GET", path: "/inquiries/1" });
+    recorder.endStep();
+    expect(transport.requests[0]?.headers["x-test-time"]).toBe(
+      "2026-11-15T23:59:59-06:00",
+    );
+    expect(saved(directory).steps[0]?.calls[0]?.request.headers).toMatchObject({
+      "x-test-time": "2026-11-15T23:59:59-06:00",
+    });
+  });
+
   it("hides the Authorization header whatever its case", () => {
     expect(
       maskHeaders({ Authorization: "Bearer abc", "X-Other": "visible" }),

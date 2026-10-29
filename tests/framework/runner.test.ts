@@ -97,6 +97,26 @@ describe("the runner", () => {
     expect(record).toMatchObject({ result: "passed", approved: true });
   });
 
+  it("lets a step expect what the next one does, and goes on when it comes", async () => {
+    const sharing: Step<Context> = {
+      ...step("a"),
+      expects: (next) => next,
+    };
+    const casePlan = { ...plan(["a", "b"]), steps: [sharing, step("b")] };
+    const rejected = reply(200, { code: "R-103" });
+
+    const both = setup(scripted([rejected, rejected]));
+    expect(await runCase(casePlan, both.context, both.recorder)).toMatchObject({
+      result: "passed",
+    });
+    expect(both.context.ran).toEqual(["a", "b"]);
+
+    const first = setup(scripted([ok]));
+    expect(
+      await runCase(casePlan, first.context, first.recorder),
+    ).toMatchObject({ result: "failed", reason: "a: expected R-103, got OK" });
+  });
+
   it("stops at the first problem and marks the steps that never ran", async () => {
     const { recorder, context } = setup(
       scripted([ok, reply(200, { code: "R-101" })]),

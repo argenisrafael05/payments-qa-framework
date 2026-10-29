@@ -8,12 +8,9 @@ export const createReference: PaymentStep = {
   run: (context) =>
     context.apis.merchant.createReference(
       need(context.tokens.merchant, "The merchant's token"),
-      context.reference,
+      need(context.reference, "The reference to create"),
     ),
   keep: (context, body) => {
-    context.created = {
-      code: text(body.reference, "The reference"),
-      amount: context.reference.amount,
-    };
+    context.created = { code: text(body.reference, "The reference") };
   },
 };
