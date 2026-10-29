@@ -1,0 +1,5 @@
+package-lock.json
+artifacts/
+coverage/
+playwright-report/
+test-results/

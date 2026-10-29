@@ -1,0 +1,23 @@
+{
+  "region": "mx",
+  "referenceLength": 14,
+  "utcOffset": "-06:00",
+  "decimals": 2,
+  "merchants": [
+    {
+      "id": "merchant-mx-1",
+      "name": "Merchant One",
+      "keyEnv": "MX_MERCHANT_1_KEY"
+    }
+  ],
+  "paymentMethods": [
+    {
+      "id": "supermarket",
+      "name": "Supermarket",
+      "kind": "standard",
+      "keyEnv": "MX_SUPERMARKET_KEY",
+      "operations": ["inquiry", "payment"],
+      "amountLimits": { "min": 1, "max": 10000 }
+    }
+  ]
+}

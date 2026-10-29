@@ -1,9 +1,9 @@
 # Requerimientos de Payments QA Framework
 
-| Versión | Fecha | Cambio |
-| --- | --- | --- |
-| 0.1 | Octubre 2026 | Versión inicial |
-| 0.2 | Octubre 2026 | Cambios de la revisión estática y del [análisis de pruebas](test-analysis.md) |
+| Versión | Fecha        | Cambio                                                                                                                       |
+| ------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | Octubre 2026 | Versión inicial                                                                |
+| 0.2     | Octubre 2026 | Cambios de la revisión estática y del [análisis de pruebas](test-analysis.md) |
 
 ## 1. Visión
 
@@ -19,20 +19,20 @@ Cada corrida genera un reporte de ejecución con el resumen de resultados al ini
 
 **De lo que construimos (el framework y su reporte)**
 
-| Usuario | Qué busca |
-| --- | --- |
-| Equipo de QA | Automatizar los flujos de pago de cada integración, con sus validaciones, y saber después de cada cambio si todo sigue bien. También agregar integraciones y casos nuevos sin mucho trabajo |
-| Líder | Consultar el resultado y el alcance de la corrida, y revisar los casos con sus evidencias |
-| Revisor técnico | Clonar el repo, correrlo y entender cómo está armado |
+| Usuario         | Qué busca                                                                                                                                                                                   |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Equipo de QA    | Automatizar los flujos de pago de cada integración, con sus validaciones, y saber después de cada cambio si todo sigue bien. También agregar integraciones y casos nuevos sin mucho trabajo |
+| Líder           | Consultar el resultado y el alcance de la corrida, y revisar los casos con sus evidencias                                                                                                   |
+| Revisor técnico | Clonar el repo, correrlo y entender cómo está armado                                                                                                                                        |
 
 **De lo que probamos (PayRef)**
 
-| Usuario | Qué busca |
-| --- | --- |
-| Merchant | Necesita cobrar: entra con su propia llave, crea referencias de pago, consulta su estatus, pide el QR o link de la wallet y las cancela cuando ya no aplican |
-| Payment method estándar, como un súper | Consultar la referencia y avisar el pago cuando el cliente ya pagó |
+| Usuario                                | Qué busca                                                                                                                                                                                                                |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Merchant                               | Necesita cobrar: entra con su propia llave, crea referencias de pago, consulta su estatus, pide el QR o link de la wallet y las cancela cuando ya no aplican                                                             |
+| Payment method estándar, como un súper | Consultar la referencia y avisar el pago cuando el cliente ya pagó                                                                                                                                                       |
 | Banco, un payment method personalizado | Usa el contrato estándar y en su configuración prende una regla de negocio especial, la ventana de reverso: valida antes de confirmar y puede reversar dentro de la ventana si algo falla. No todos los bancos la tienen |
-| Wallet, un payment method digital | Genera un QR o link para que el cliente pague, y avisa el pago con un webhook firmado |
+| Wallet, un payment method digital      | Genera un QR o link para que el cliente pague, y avisa el pago con un webhook firmado                                                                                                                                    |
 
 ## 3. Alcance
 
@@ -52,10 +52,10 @@ Cada corrida genera un reporte de ejecución con el resumen de resultados al ini
 
 ## 4. Épicas
 
-| Épica | Descripción | Historias |
-| --- | --- | --- |
+| Épica                              | Descripción                                                                                                    | Historias                    |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------- |
 | E1. El framework de automatización | Lo que construimos: automatizar los flujos de pago y sus validaciones, con una arquitectura que aguante crecer | HU-01 a HU-06, HU-12 y HU-13 |
-| E2. PayRef, el orquestador | Lo que probamos: el merchant, los payment methods y el orquestador que los conecta | HU-07 a HU-11 |
+| E2. PayRef, el orquestador         | Lo que probamos: el merchant, los payment methods y el orquestador que los conecta                             | HU-07 a HU-11                |
 
 ## 5. Historias de usuario
 
@@ -221,20 +221,20 @@ Lo extra es de cada integración, no de todos los bancos ni de todas las wallets
 
 ## 6. Requisitos no funcionales
 
-| ID | Requisito | Cómo se valida |
-| --- | --- | --- |
-| RNF-01 | Corre en una máquina limpia: con Node 24 y Docker, `npm install` y `npm test` corren todo, sin pasos manuales, ni siquiera copiar el `.env` | Clonar en limpio y correr |
-| RNF-02 | Las pruebas del framework corren sin PayRef ni Docker, en menos de 30 segundos | `npm run test:unit` |
-| RNF-03 | El juez y la evidencia tienen al menos 80 % de cobertura de líneas y de ramas en las pruebas del framework | Reporte de cobertura de Vitest |
-| RNF-04 | El código pasa TypeScript estricto, ESLint y Prettier sin errores | `npm run verify` |
-| RNF-05 | Ninguna evidencia guarda credenciales completas: el header `Authorization`, la llave y el token del auth salen ocultos. La firma del webhook queda visible, porque solo sirve para su propia petición, y el secreto nunca viaja | Prueba del framework sobre el enmascarado |
-| RNF-06 | Las credenciales del repo son de prueba: viven en `.env.example`, y el `.env` nunca se sube | Revisión del repo y de `.gitignore` |
-| RNF-07 | Los casos son independientes: cada uno crea sus datos, y un caso suelto sale igual que dentro de la corrida completa | Correr un caso solo y en la corrida completa |
-| RNF-08 | Ninguna prueba espera tiempo real: los casos de tiempo usan la hora de prueba | Regla de ESLint contra las esperas fijas |
-| RNF-09 | La corrida completa de una integración tarda menos de 5 minutos, con la imagen de MySQL ya descargada | Duración en el reporte. La primera corrida puede tardar más, y el README lo avisa |
-| RNF-10 | Las corridas no se pisan: cada una guarda sus archivos aparte | Correr dos veces y comparar las carpetas |
-| RNF-11 | El framework solo lee la base de PayRef, con un usuario de solo lectura | Antes de cada corrida, la revisión rápida intenta escribir con ese usuario, y si puede, la corrida no empieza |
-| RNF-12 | Las pruebas dan siempre el mismo resultado: las nuevas corren 3 veces seguidas y salen igual las tres | `--repeat-each=3` al cerrar cada fase |
+| ID     | Requisito                                                                                                                                                                                                                       | Cómo se valida                                                                                                |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| RNF-01 | Corre en una máquina limpia: con Node 24 y Docker, `npm install` y `npm test` corren todo, sin pasos manuales, ni siquiera copiar el `.env`                                                                                     | Clonar en limpio y correr                                                                                     |
+| RNF-02 | Las pruebas del framework corren sin PayRef ni Docker, en menos de 30 segundos                                                                                                                                                  | `npm run test:unit`                                                                                           |
+| RNF-03 | El juez y la evidencia tienen al menos 80 % de cobertura de líneas y de ramas en las pruebas del framework                                                                                                                      | Reporte de cobertura de Vitest                                                                                |
+| RNF-04 | El código pasa TypeScript estricto, ESLint y Prettier sin errores                                                                                                                                                               | `npm run verify`                                                                                              |
+| RNF-05 | Ninguna evidencia guarda credenciales completas: el header `Authorization`, la llave y el token del auth salen ocultos. La firma del webhook queda visible, porque solo sirve para su propia petición, y el secreto nunca viaja | Prueba del framework sobre el enmascarado                                                                     |
+| RNF-06 | Las credenciales del repo son de prueba: viven en `.env.example`, y el `.env` nunca se sube                                                                                                                                     | Revisión del repo y de `.gitignore`                                                                           |
+| RNF-07 | Los casos son independientes: cada uno crea sus datos, y un caso suelto sale igual que dentro de la corrida completa                                                                                                            | Correr un caso solo y en la corrida completa                                                                  |
+| RNF-08 | Ninguna prueba espera tiempo real: los casos de tiempo usan la hora de prueba                                                                                                                                                   | Regla de ESLint contra las esperas fijas                                                                      |
+| RNF-09 | La corrida completa de una integración tarda menos de 5 minutos, con la imagen de MySQL ya descargada                                                                                                                           | Duración en el reporte. La primera corrida puede tardar más, y el README lo avisa                             |
+| RNF-10 | Las corridas no se pisan: cada una guarda sus archivos aparte                                                                                                                                                                   | Correr dos veces y comparar las carpetas                                                                      |
+| RNF-11 | El framework solo lee la base de PayRef, con un usuario de solo lectura                                                                                                                                                         | Antes de cada corrida, la revisión rápida intenta escribir con ese usuario, y si puede, la corrida no empieza |
+| RNF-12 | Las pruebas dan siempre el mismo resultado: las nuevas corren 3 veces seguidas y salen igual las tres                                                                                                                           | `--repeat-each=3` al cerrar cada fase                                                                         |
 
 ## 7. Definición de terminado
 
