@@ -10,7 +10,7 @@ import {
 } from "../../framework/payments/database/final-check.ts";
 import type { Movement } from "../../framework/payments/database/readings.ts";
 
-// The final check of the database, with controlled rows.
+// The final check of the database, with controlled rows (HU-01).
 
 const confirmed: ConfirmedPayment = {
   folio: "MX-0000000001",

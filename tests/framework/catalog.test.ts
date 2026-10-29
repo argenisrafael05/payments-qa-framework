@@ -6,7 +6,7 @@ import { casesFor, loadCatalog } from "../../framework/payments/catalog.ts";
 import { loadIntegration } from "../../framework/payments/integrations.ts";
 import { temporaryDirectory } from "./builders.ts";
 
-// A typo fails when the catalog loads, before anything runs, and says where.
+// A typo fails when the catalog loads, before anything runs, and says where (HU-03).
 
 const valid = {
   id: "F01-01",

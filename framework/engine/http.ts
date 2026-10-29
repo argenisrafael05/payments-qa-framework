@@ -29,7 +29,7 @@ export type Transport = {
 };
 
 // How to read the responses of one operation. Every difference between APIs lives here, as
-// data, so the judge never needs an if per API.
+// data, so the judge never needs an if per API (3.1).
 export type OperationTemplate = {
   // The status that means the request reached the business.
   businessStatus: number;
@@ -38,9 +38,9 @@ export type OperationTemplate = {
   success: { code: string; requires: readonly string[] };
   // The API's codes, translated to PayRef's.
   codes: Readonly<Record<string, string>>;
-  // Hidden in the evidence copy.
+  // Hidden in the evidence copy (RNF-05).
   secrets?: { request?: readonly string[]; response?: readonly string[] };
-  // Only an operation that can be repeated without risk is retried.
+  // Only an operation that can be repeated without risk is retried (3.1).
   repeatable: boolean;
 };
 
@@ -56,10 +56,10 @@ export type Call = {
   body?: JsonObject;
 };
 
-// The gateway sends these when the system did not answer.
+// The gateway sends these when the system did not answer (8.5).
 const gatewayStatuses = [408, 502, 503, 504];
 
-// The wrapper of every call: it sends through the transport, retries only what failed
+// The wrapper of every call (HU-01): it sends through the transport, retries only what failed
 // on the way, and leaves each attempt in the evidence.
 export class Http {
   readonly #transport: Transport;

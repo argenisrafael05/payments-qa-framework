@@ -11,7 +11,7 @@ import {
 export type Step<C> = {
   name: string;
   title: string;
-  // It executes a call, or it observes in the database what someone else did.
+  // It executes a call, or it observes in the database what someone else did (HU-01).
   kind: "executes" | "observes";
   // The business steps it carries out, as a case names them in its objective.
   covers: readonly string[];
@@ -28,7 +28,7 @@ export type CheckOutcome = {
   readings: ReadingRecord[];
 };
 
-// A check reads the database. It never reads a response: that is the judge's job.
+// A check reads the database. It never reads a response: that is the judge's job (3.1).
 export type DatabaseCheck<C> = {
   name: string;
   title: string;
@@ -39,16 +39,16 @@ export type CasePlan<C> = {
   // Up to the objective, which is the last one.
   steps: readonly Step<C>[];
   objective: Expectation;
-  // The extra checks the case asks for by name.
+  // The extra checks the case asks for by name (3.1).
   checks: readonly DatabaseCheck<C>[];
   finalCheck: DatabaseCheck<C>;
 };
 
 const success: Expectation = { kind: "success" };
 
-// Runs a case to its objective. The steps before it only have to succeed, and the case
+// Runs a case to its objective (3.1). The steps before it only have to succeed, and the case
 // stops at the first problem. The extra checks come after, and the final check of the
-// database always runs, once.
+// database always runs, once (HU-01).
 export async function runCase<C>(
   plan: CasePlan<C>,
   context: C,
@@ -83,7 +83,7 @@ export async function runCase<C>(
     }
   }
 
-  // After a problem the extra checks do not run: they are not a diagnosis.
+  // After a problem the extra checks do not run: they are not a diagnosis (HU-01).
   for (const [index, check] of plan.checks.entries()) {
     if (stopped || recorder.finished) {
       break;

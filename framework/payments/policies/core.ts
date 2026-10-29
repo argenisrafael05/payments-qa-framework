@@ -1,7 +1,7 @@
 import type { OperationTemplate } from "../../engine/http.ts";
 import { businessCodes } from "../codes.ts";
 
-// How to read PayRef's core contract: the defaults of the API and what each operation
+// How to read PayRef's core contract (3.1): the defaults of the API and what each operation
 // adds. Every standard integration shares it. Its codes are already PayRef's, so the
 // dictionary translates each one to itself.
 const codes = Object.fromEntries(businessCodes.map((code) => [code, code]));

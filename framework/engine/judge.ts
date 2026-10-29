@@ -2,7 +2,7 @@ import { isGatewayStatus, type Exchange, type JsonObject } from "./http.ts";
 import { findLeak } from "./leaks.ts";
 
 // What a step expects: a success, an exact business code or an exact HTTP status. The steps
-// before the objective only expect a success.
+// before the objective only expect a success (3.1).
 export type Expectation =
   | { kind: "success" }
   | { kind: "code"; code: string }
@@ -13,7 +13,7 @@ export type JudgeCheck =
   "leak" | "transport" | "format" | "success" | "code" | "unclassified";
 
 // What the response says, apart from the verdict: a payment the API confirmed counts even when
-// the case expected a rejection, because the database has to match it.
+// the case expected a rejection, because the database has to match it (HU-01).
 type Reading = { succeeded: boolean; body?: JsonObject };
 
 export type Verdict =
@@ -31,7 +31,7 @@ export type Verdict =
       succeeded: false;
     };
 
-// The judge only reads responses. It never reads the database, never decides what is
+// The judge only reads responses (3.1). It never reads the database, never decides what is
 // tested and never compares a message: the code decides and the message stays as evidence.
 export function judge(exchange: Exchange, expectation: Expectation): Verdict {
   const { outcome, template } = exchange;
@@ -108,7 +108,7 @@ export function judge(exchange: Exchange, expectation: Expectation): Verdict {
   const translated =
     typeof code === "string" ? template.codes[code] : undefined;
 
-  // 6. A code that is not in the dictionary is an unclassified response.
+  // 6. A code that is not in the dictionary is an unclassified response (8.5).
   if (translated === undefined) {
     const shown = typeof code === "string" ? code : "no code";
     return mismatch("unclassified", `an unclassified response (${shown})`);

@@ -9,7 +9,7 @@ import type { Integration } from "./integrations.ts";
 
 const baseCatalog = new URL("../cases/base/", import.meta.url);
 
-// A case is only data: it never writes an assertion.
+// A case is only data: it never writes an assertion (3.1).
 const caseSchema = z.strictObject({
   id: z.string().regex(/^[A-Z0-9]+(?:-[A-Z0-9]+)*$/),
   title: z.string().min(1),
@@ -19,7 +19,7 @@ const caseSchema = z.strictObject({
     amountType: z.enum(["fixed"]),
     amount: z.number().positive(),
   }),
-  // Where the case ends and what it expects there: a business code, or the HTTP status
+  // Where the case ends and what it expects there (3.1): a business code, or the HTTP status
   // of a request that must not reach the business.
   objective: z.strictObject({
     step: z.enum(["inquiry", "request", "notice"]),
@@ -30,7 +30,7 @@ const caseSchema = z.strictObject({
   }),
   tags: z.array(z.string().regex(/^[a-z][a-z0-9-]*$/)),
   checks: z.array(z.enum(extraCheckNames)).optional(),
-  // A case with a rule still pending does not run, and says why.
+  // A case with a rule still pending does not run, and says why (8.5).
   blocked: z.string().min(1).optional(),
   notes: z.string().optional(),
 });

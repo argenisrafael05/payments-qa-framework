@@ -68,7 +68,7 @@ export type CaseRecord = CaseHeader &
     steps: StepRecord[];
     checks: CheckRecord[];
     finalCheck?: CheckRecord;
-    // In the order they happened. The first one decides the result.
+    // In the order they happened. The first one decides the result (8.5).
     problems: Problem[];
     // Added at the end, as the tool reported it.
     playwright?: { status: string; durationMs: number };
@@ -76,7 +76,7 @@ export type CaseRecord = CaseHeader &
 
 type Named = { name: string; title: string };
 
-// Collects the evidence of one case and saves it after every step. The file
+// Collects the evidence of one case and saves it after every step (HU-01). The file
 // exists from the moment the case starts, and nothing changes it once the case is finished.
 export class Recorder {
   readonly record: CaseRecord;
@@ -213,7 +213,7 @@ export class Recorder {
     return this.record;
   }
 
-  // A case that never started keeps its reason, and its file says so.
+  // A case that never started keeps its reason (8.5), and its file says so.
   notRun(reason: string): CaseRecord {
     Object.assign(this.record, {
       status: "finished",
@@ -238,7 +238,7 @@ export class Recorder {
   }
 }
 
-// The minimum evidence: every step that ran left its call or its readings and its
+// The minimum evidence (8.5, HU-01): every step that ran left its call or its readings and its
 // verdict, every check that ran left its result, and the final check is there. Zero rows and a
 // captured error are evidence too.
 export function evidenceGaps(record: CaseRecord): string[] {

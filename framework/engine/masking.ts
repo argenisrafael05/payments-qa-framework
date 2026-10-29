@@ -1,4 +1,4 @@
-// The minimum masking: the credentials are hidden and the business identifiers stay
+// The masking of RNF-05: the credentials are hidden and the business identifiers stay
 // visible. The judge always reads the original, and only the copy in the evidence is masked.
 
 export const hidden = "[hidden]";

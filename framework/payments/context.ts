@@ -28,7 +28,7 @@ export type PaymentContext = {
   // The payment method's own number for the operation.
   sequence: string;
   tokens: { merchant?: string; paymentMethod?: string };
-  // What the API confirmed. The database has to match it at the end.
+  // What the API confirmed. The database has to match it at the end (HU-01).
   confirmed: ConfirmedPayment[];
 };
 

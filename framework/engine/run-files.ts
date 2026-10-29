@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Result } from "./results.ts";
 
-// Every run keeps its own folder, and nothing is ever deleted on its own.
+// Every run keeps its own folder, and nothing is ever deleted on its own (RNF-10).
 export const runsDirectory = fileURLToPath(
   new URL("../../artifacts/runs/", import.meta.url),
 );
