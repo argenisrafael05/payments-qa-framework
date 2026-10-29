@@ -22,12 +22,12 @@ const app = Fastify({
 await app.register(swagger, {
   openapi: { info: { title: "PayRef", version: config.version } },
 });
-registerErrorHandling(app);
+registerErrorHandling(app, config.bugs);
 registerClock(app, config);
 
 const auth = createAuth(region);
 auth.register(app);
-registerReferences(app, { db, region, auth });
+registerReferences(app, { db, region, auth, bugs: config.bugs });
 registerPayments(app, { db, region, auth, bugs: config.bugs });
 
 app.get("/health", { schema: { hide: true } }, async (_request, reply) => {

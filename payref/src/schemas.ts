@@ -102,6 +102,41 @@ export const createReferenceSchema = {
   }),
 };
 
+export type ReferenceParams = { reference: string };
+
+const referenceParams = {
+  type: "object",
+  properties: { reference: referenceCode },
+  required: ["reference"],
+} as const;
+
+// The merchant sees its reference with its state. Expired is not kept: it comes from the date
+// and the time of the region.
+export const viewReferenceSchema = {
+  tags: ["merchant"],
+  params: referenceParams,
+  response: responses({
+    reference: referenceCode,
+    status: {
+      type: "string",
+      enum: ["active", "paid", "cancelled", "expired"],
+    },
+    type: referenceType,
+    amountType: amountTypes,
+    amount,
+    expiresOn,
+  }),
+};
+
+export const cancelReferenceSchema = {
+  tags: ["merchant"],
+  params: referenceParams,
+  response: responses({
+    reference: referenceCode,
+    status: { type: "string", enum: ["cancelled"] },
+  }),
+};
+
 export type InquiryParams = { reference: string };
 
 export const inquirySchema = {

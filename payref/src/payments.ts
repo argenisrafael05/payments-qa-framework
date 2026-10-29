@@ -84,6 +84,10 @@ export function registerPayments(
       if (!reference) {
         return rejections.notFound;
       }
+      // A cancelled reference is never paid, and this goes before its expiry (8.4).
+      if (reference.status === "cancelled") {
+        return rejections.cancelled;
+      }
       const now = nowOf(request);
       const expired = checkExpiry(reference.expiresOn, now, region, bugs);
       if (expired) {

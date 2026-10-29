@@ -53,7 +53,7 @@ export function checkAmount(
 }
 
 // The decimals of the amount as it came, also when it is written with an exponent.
-function decimalsOf(amount: number): number {
+export function decimalsOf(amount: number): number {
   const [mantissa = "", exponent = "0"] = String(amount)
     .toLowerCase()
     .split("e");
