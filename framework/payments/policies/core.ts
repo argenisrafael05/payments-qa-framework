@@ -16,6 +16,7 @@ function operation(details: {
     codeField: "code",
     success: { code: "OK", requires: details.requires },
     codes,
+    stateField: "status",
     secrets: details.secrets,
     repeatable: details.repeatable,
   };
@@ -28,6 +29,11 @@ export const coreApi = {
     secrets: { request: ["key"], response: ["token"] },
   }),
   createReference: operation({ requires: ["reference"], repeatable: false }),
+  viewReference: operation({
+    requires: ["reference", "status"],
+    repeatable: true,
+  }),
+  cancelReference: operation({ requires: ["reference"], repeatable: false }),
   inquiry: operation({ requires: ["reference"], repeatable: true }),
   // A payment is a success only with its folio and its authorization.
   payment: operation({

@@ -8,5 +8,15 @@
   "paymentMethod": {
     "id": "supermarket",
     "keyEnv": "MX_SUPERMARKET_KEY"
+  },
+  "merchant": {
+    "id": "merchant-mx-1",
+    "keyEnv": "MX_MERCHANT_1_KEY"
+  },
+  "otherMerchants": {
+    "another-merchant": {
+      "id": "merchant-mx-2",
+      "keyEnv": "MX_MERCHANT_2_KEY"
+    }
   }
 }

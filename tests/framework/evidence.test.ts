@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import type { APIRequestContext } from "@playwright/test";
 import { describe, expect, it, vi } from "vitest";
 import {
   evidenceGaps,
@@ -11,6 +12,7 @@ import { maskHeaders } from "../../framework/engine/masking.ts";
 import { runCase, type Step } from "../../framework/engine/runner.ts";
 import { coreApi } from "../../framework/payments/policies/core.ts";
 import { currentRun } from "../../framework/payments/run-setup.ts";
+import { playwrightTransport } from "../fixtures/transport.ts";
 import { reply, scripted, temporaryDirectory } from "./builders.ts";
 
 // The evidence is compared against what really happened (3.2).
@@ -121,6 +123,87 @@ describe("the evidence", () => {
     expect(saved(directory).steps[0]?.calls[0]?.request.headers).toMatchObject({
       "x-test-time": "2026-11-15T23:59:59-06:00",
     });
+  });
+
+  it("sends the time of a call that brings its own, not the one of the case", async () => {
+    const directory = temporaryDirectory();
+    const recorder = recorderIn(directory);
+    const transport = scripted([
+      reply(200, { code: "OK" }),
+      reply(200, { code: "OK" }),
+    ]);
+    const http = new Http({
+      transport,
+      baseUrl: "http://payref.test",
+      recorder,
+      testTime: "2026-11-20T12:00:00-06:00",
+    });
+    recorder.plan(
+      [{ name: "inquiry", title: "Inquiry", kind: "executes" }],
+      [],
+    );
+    recorder.beginStep(0);
+    await http.call(coreApi.inquiry, {
+      method: "GET",
+      path: "/inquiries/1",
+      testTime: "2026-11-15T00:00:00-06:00",
+    });
+    await http.call(coreApi.inquiry, { method: "GET", path: "/inquiries/1" });
+    recorder.endStep();
+    expect(
+      transport.requests.map((request) => request.headers["x-test-time"]),
+    ).toEqual(["2026-11-15T00:00:00-06:00", "2026-11-20T12:00:00-06:00"]);
+  });
+
+  it("calls an objective the way the case says: without a token, with another, or with its body cut", async () => {
+    const recorder = recorderIn(temporaryDirectory());
+    const transport = scripted([
+      reply(401, { message: "Missing or invalid token" }),
+      reply(403, { message: "This caller cannot use this operation" }),
+      reply(400, { message: "Body is not valid JSON" }),
+    ]);
+    const http = httpFor(transport, recorder);
+    recorder.plan(
+      [{ name: "payment", title: "Payment", kind: "executes" }],
+      [],
+    );
+    recorder.beginStep(0);
+    const call = {
+      method: "POST",
+      path: "/payments",
+      token: "its-own-token",
+      body: { reference: "1" },
+    } as const;
+    await http.with({ token: null }).call(coreApi.payment, call);
+    await http.with({ token: "another-token" }).call(coreApi.payment, call);
+    await http.with({ breakBody: true }).call(coreApi.payment, call);
+    recorder.endStep();
+    const [none, another, broken] = transport.requests;
+    expect(none?.headers.authorization).toBeUndefined();
+    expect(another?.headers.authorization).toBe("Bearer another-token");
+    expect(broken?.headers.authorization).toBe("Bearer its-own-token");
+    expect(broken?.body).toBe('{"reference":"1"');
+  });
+
+  it("sends the bytes the framework built, so the evidence is what traveled", async () => {
+    const sent: unknown[] = [];
+    const request = {
+      fetch: async (_url: string, options: { data?: unknown }) => {
+        sent.push(options.data);
+        return {
+          status: () => 400,
+          headers: () => ({}),
+          text: async () => "{}",
+        };
+      },
+    } as unknown as APIRequestContext;
+    await playwrightTransport(request).send({
+      method: "POST",
+      url: "http://payref.test/payments",
+      headers: { "content-type": "application/json" },
+      body: '{"reference":"1"',
+    });
+    expect(sent[0]).toEqual(Buffer.from('{"reference":"1"'));
   });
 
   it("hides the Authorization header whatever its case", () => {
@@ -425,6 +508,7 @@ describe("the evidence", () => {
       QA_DB_USER: "reader",
       QA_DB_PASSWORD: "password",
       MX_MERCHANT_1_KEY: "merchant-key",
+      MX_MERCHANT_2_KEY: "another-merchant-key",
       MX_SUPERMARKET_KEY: "supermarket-key",
     };
     const first = currentRun({

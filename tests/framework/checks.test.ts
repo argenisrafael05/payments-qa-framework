@@ -23,10 +23,21 @@ function contextWith(
       ],
     ],
   } as unknown as Pool;
+  // A payment the API confirmed, as after the flow of the payment.
+  const confirmed = [
+    {
+      folio: "MX-0000000001",
+      authorization: "CTSEZE",
+      amount: 150.5,
+      sequence: "supermarket-1",
+      paymentMethodId: "supermarket",
+    },
+  ];
   return {
     db,
     reference: { type, amountType: "fixed", amount: 150.5 },
     created: { code: "12345678901234" },
+    confirmed,
   } as unknown as PaymentContext;
 }
 
@@ -44,6 +55,17 @@ describe("the state of the reference", () => {
     expect(await state.run(contextWith("recurring", "active"))).toMatchObject({
       result: "match",
       expected: "active",
+    });
+  });
+
+  it("expects a cancelled reference after the merchant cancelled it", async () => {
+    const context = {
+      ...contextWith("single", "cancelled"),
+      cancelled: true,
+    } as PaymentContext;
+    expect(await state.run(context)).toMatchObject({
+      result: "match",
+      expected: "cancelled",
     });
   });
 

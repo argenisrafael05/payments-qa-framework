@@ -23,6 +23,13 @@ export const inquiry: PaymentStep = {
     ),
 };
 
+// A code nobody created: the inquiry tells it with R-101, whatever the payment after it
+// expects, like a 401 for a token PayRef never gave.
+export const inquiryOfUnknown: PaymentStep = {
+  ...inquiry,
+  expects: () => ({ kind: "code", code: "R-101" }),
+};
+
 // The request and the notice in one call, like a supermarket that only calls once the
 // customer has paid. A case that ends at either of them ends here.
 export const payTogether: PaymentStep = {
@@ -57,7 +64,7 @@ export const secondPayment: PaymentStep = {
       need(context.tokens.paymentMethod, "The payment method's token"),
       {
         reference: need(context.created, "The reference").code,
-        amount: context.secondAmount,
+        amount: context.amount,
         sequence: need(context.secondSequence, "The second sequence"),
       },
     ),
@@ -66,7 +73,7 @@ export const secondPayment: PaymentStep = {
       context,
       body,
       need(context.secondSequence, "The second sequence"),
-      context.secondAmount,
+      context.amount,
     ),
 };
 

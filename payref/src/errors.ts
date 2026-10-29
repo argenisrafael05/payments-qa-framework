@@ -19,16 +19,27 @@ export const rejections = {
 } as const;
 
 // Errors that never reach the business. None of them shows internal details.
-export function registerErrorHandling(app: FastifyInstance): void {
+export function registerErrorHandling(
+  app: FastifyInstance,
+  bugs: ReadonlySet<number>,
+): void {
+  // Bug 4: each error goes out with its stack trace as the message.
+  const shown = (error: Error, message: string) =>
+    bugs.has(4) ? (error.stack ?? message) : message;
+
   app.setErrorHandler<FastifyError>((error, request, reply) => {
     if (error.validation) {
-      return reply.code(400).send({ message: error.message });
+      return reply.code(400).send({ message: shown(error, error.message) });
     }
     if (error.statusCode !== undefined && error.statusCode < 500) {
-      return reply.code(error.statusCode).send({ message: error.message });
+      return reply
+        .code(error.statusCode)
+        .send({ message: shown(error, error.message) });
     }
     request.log.error(error);
-    return reply.code(500).send({ code: "R-199", message: "Technical error" });
+    return reply
+      .code(500)
+      .send({ code: "R-199", message: shown(error, "Technical error") });
   });
 
   app.setNotFoundHandler((_request, reply) =>

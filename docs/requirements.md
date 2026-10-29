@@ -1,10 +1,12 @@
 # Requerimientos de Payments QA Framework
 
-| Versión | Fecha        | Cambio                                                                                                                       |
-| ------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | Octubre 2026 | Versión inicial                                                                |
-| 0.2     | Octubre 2026 | Cambios de la revisión estática y del [análisis de pruebas](test-analysis.md) |
-| 0.3     | Octubre 2026 | La consulta solo informa y el pago siempre valida (HU-08)                      |
+| Versión | Fecha        | Cambio                                                                                                                        |
+| ------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | Octubre 2026 | Versión inicial                                                                 |
+| 0.2     | Octubre 2026 | Cambios de la revisión estática y del [análisis de pruebas](test-analysis.md)  |
+| 0.3     | Octubre 2026 | La consulta solo informa y el pago siempre valida (HU-08)                       |
+| 0.4     | Octubre 2026 | Cancelar una referencia vencida responde R-103 (HU-07)                          |
+| 0.5     | Octubre 2026 | La config de cada integración trae sus merchants, cada uno con un alias (HU-03) |
 
 ## 1. Visión
 
@@ -93,6 +95,7 @@ Como equipo de QA, quiero validar las reglas de negocio de cada pago, para atrap
 Como equipo de QA, quiero conectar una integración nueva o agregar un caso nuevo sin tocar el flujo de pago, para que sumar cobertura cueste poco y el código siga limpio.
 
 - El banco entra solo con su configuración, sin código propio: su ventana de reverso es una regla que se prende en su JSON.
+- La config de cada integración trae su payment method y sus merchants: el que crea sus referencias y los otros que piden algunos casos, cada uno con un alias que dice para qué es. Un caso nombra el alias, nunca el id, y si un id cambia, solo cambia la config.
 - Un caso nuevo es un JSON que dice su flujo, su referencia y su objetivo: el paso donde termina y el código que espera.
 - Un caso del catálogo base corre en todas las integraciones que pueden hacerlo, sin copiarlo. Las que no pueden lo enseñan en el reporte como No ejecutado, con su razón.
 - Si un eje de la referencia trae una lista, sale una prueba por cada valor.
@@ -164,7 +167,7 @@ Como merchant, quiero crear referencias de pago, consultarlas y cancelarlas, par
 - El código que crea PayRef trae el largo de su región: 14 dígitos en México y 10 en Sudamérica.
 - Crear una referencia con datos inválidos, como un monto en cero o con más decimales de los de su región, un monto fijo que no viene o un vencimiento que ya pasó, responde 400, dice qué campo falló y no crea nada.
 - Puede consultar el estado de sus referencias: activa, pagada, cancelada o vencida. Vencida no se guarda: sale de la fecha y de la hora de su región.
-- Puede cancelar una referencia activa. Una única pagada responde R-102, una ya cancelada R-105, y una con un pago en curso en la ventana del banco, R-108.
+- Puede cancelar una referencia activa. Una única pagada responde R-102, una ya cancelada R-105, una vencida R-103, y una con un pago en curso en la ventana del banco, R-108.
 - Solo ve, cancela y pide el recurso de sus referencias. La de otro merchant responde R-101, como si no existiera, para no revelar que existe.
 - Una referencia cancelada ya no se puede pagar.
 

@@ -13,7 +13,9 @@ export function playwrightTransport(
         const response = await request.fetch(url, {
           method,
           headers,
-          data: body,
+          // The bytes as the framework built them. A text that is not valid JSON would be
+          // encoded again, and the evidence would not show what traveled.
+          data: body === undefined ? undefined : Buffer.from(body),
           timeout,
           failOnStatusCode: false,
           maxRedirects: 0,

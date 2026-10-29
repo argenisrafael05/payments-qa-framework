@@ -1,0 +1,81 @@
+[
+  {
+    "id": "F11-01",
+    "title": "A request without a token is not served",
+    "flow": "payment",
+    "reference": {
+      "type": "single",
+      "amountType": "fixed"
+    },
+    "amount": 150.5,
+    "objective": {
+      "step": "create",
+      "expect": 401,
+      "caller": "no-token"
+    },
+    "tags": ["hu-09"]
+  },
+  {
+    "id": "F11-02",
+    "title": "A made-up token gets 401 before PayRef looks for the reference",
+    "flow": "unknown-reference",
+    "code": "00000000000000",
+    "amount": 150.5,
+    "objective": {
+      "step": "request",
+      "expect": 401,
+      "caller": "invalid-token"
+    },
+    "tags": ["hu-09"],
+    "notes": "If PayRef looked for the reference first, it would tell anyone without credentials which references exist."
+  },
+  {
+    "id": "F11-03",
+    "title": "A wrong key gets no token",
+    "flow": "payment",
+    "reference": {
+      "type": "single",
+      "amountType": "fixed"
+    },
+    "amount": 150.5,
+    "objective": {
+      "step": "token",
+      "expect": 401,
+      "caller": "wrong-key"
+    },
+    "tags": ["hu-09"]
+  },
+  {
+    "id": "F11-04",
+    "title": "A merchant cannot send a payment",
+    "flow": "payment",
+    "reference": {
+      "type": "single",
+      "amountType": "fixed"
+    },
+    "amount": 150.5,
+    "objective": {
+      "step": "request",
+      "expect": 403,
+      "caller": "other-role"
+    },
+    "tags": ["hu-09"]
+  },
+  {
+    "id": "F11-05",
+    "title": "A malformed request gets 400 without internal details",
+    "flow": "payment",
+    "reference": {
+      "type": "single",
+      "amountType": "fixed"
+    },
+    "amount": 150.5,
+    "objective": {
+      "step": "request",
+      "expect": 400,
+      "caller": "malformed-request"
+    },
+    "tags": ["hu-02", "hu-09"],
+    "notes": "PayRef 1.0 sends the stack trace with its errors: that is its bug 4."
+  }
+]

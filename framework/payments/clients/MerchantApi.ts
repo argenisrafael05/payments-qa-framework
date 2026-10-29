@@ -22,12 +22,34 @@ export class MerchantApi {
     return requestToken(this.#http, key);
   }
 
-  createReference(token: string, reference: NewReference): Promise<Exchange> {
+  // `at` is the time it is created, when it is not the one of the case.
+  createReference(
+    token: string,
+    reference: NewReference,
+    at?: string,
+  ): Promise<Exchange> {
     return this.#http.call(coreApi.createReference, {
       method: "POST",
       path: "/references",
       token,
       body: reference,
+      testTime: at,
+    });
+  }
+
+  view(token: string, reference: string): Promise<Exchange> {
+    return this.#http.call(coreApi.viewReference, {
+      method: "GET",
+      path: `/references/${encodeURIComponent(reference)}`,
+      token,
+    });
+  }
+
+  cancel(token: string, reference: string): Promise<Exchange> {
+    return this.#http.call(coreApi.cancelReference, {
+      method: "POST",
+      path: `/references/${encodeURIComponent(reference)}/cancellation`,
+      token,
     });
   }
 }

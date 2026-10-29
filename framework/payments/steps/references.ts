@@ -4,11 +4,12 @@ export const createReference: PaymentStep = {
   name: "create-reference",
   title: "The merchant creates the reference",
   kind: "executes",
-  covers: [],
+  covers: ["create"],
   run: (context) =>
     context.apis.merchant.createReference(
       need(context.tokens.merchant, "The merchant's token"),
       need(context.reference, "The reference to create"),
+      context.creationTime,
     ),
   keep: (context, body) => {
     context.created = { code: text(body.reference, "The reference") };

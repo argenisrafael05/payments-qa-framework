@@ -11,15 +11,19 @@ export const extraChecks: Record<
   ExtraCheckName,
   DatabaseCheck<PaymentContext>
 > = {
-  // After a payment, a single reference is paid and a recurring one stays active (8.6). The
-  // state it expects comes from the type the case asked for, never from the response.
+  // The state the reference is left in, from what the API confirmed (8.6): cancelled if the
+  // merchant cancelled it, paid if it is a single one that was paid, and active if not.
   "reference-state": {
     name: "reference-state",
     title: "The reference is in the state its payment leaves it in",
     async run(context) {
       const code = need(context.created, "The reference").code;
       const type = need(context.reference, "The reference").type;
-      const expected = type === "single" ? "paid" : "active";
+      const expected = context.cancelled
+        ? "cancelled"
+        : type === "single" && context.confirmed.length > 0
+          ? "paid"
+          : "active";
       try {
         const { reference, reading } = await referenceOf(context.db, code);
         return {

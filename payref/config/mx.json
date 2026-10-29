@@ -8,6 +8,11 @@
       "id": "merchant-mx-1",
       "name": "Merchant One",
       "keyEnv": "MX_MERCHANT_1_KEY"
+    },
+    {
+      "id": "merchant-mx-2",
+      "name": "Merchant Two",
+      "keyEnv": "MX_MERCHANT_2_KEY"
     }
   ],
   "paymentMethods": [
