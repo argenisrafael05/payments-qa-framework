@@ -2,6 +2,7 @@ import { randomInt } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "mysql2/promise";
 import { callerOf, type Auth } from "./auth.ts";
+import { nowOf } from "./clock.ts";
 import type { RegionConfig } from "./config.ts";
 import { createReferenceSchema, type CreateReferenceBody } from "./schemas.ts";
 
@@ -38,7 +39,7 @@ export function registerReferences(
           amountType,
           amount ?? null,
           expiresOn ?? null,
-          new Date(),
+          nowOf(request),
         ],
       );
 

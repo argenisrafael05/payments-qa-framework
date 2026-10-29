@@ -9,6 +9,8 @@ export type Config = {
   region: Region;
   version: Version;
   mode: Mode;
+  // The bugs that are on: all of them in the 1.0, none in the 1.1.
+  bugs: ReadonlySet<number>;
   port: number;
   db: {
     host: string;
@@ -64,6 +66,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     region,
     version,
     mode,
+    bugs: bugsOf(env.PAYREF_BUGS, version),
     port: Number(required(env, `PAYREF_${region.toUpperCase()}_PORT`)),
     db: {
       host: "127.0.0.1",
@@ -78,6 +81,24 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 export function loadRegion(region: Region): RegionConfig {
   const file = new URL(`../config/${region}.json`, import.meta.url);
   return JSON.parse(readFileSync(file, "utf8")) as RegionConfig;
+}
+
+// The 1.0 comes with its bugs, like a release. PAYREF_BUGS turns on only the ones it lists,
+// like PAYREF_BUGS=2, to look at one bug at a time.
+function bugsOf(
+  value: string | undefined,
+  version: Version,
+): ReadonlySet<number> {
+  if (!value) {
+    return new Set(version === "1.0" ? [1, 2, 3, 4, 5, 6, 7, 8] : []);
+  }
+  const bugs = value.split(",").map((item) => Number(item.trim()));
+  if (bugs.some((bug) => !Number.isInteger(bug) || bug < 1 || bug > 8)) {
+    throw new Error(
+      `PAYREF_BUGS must list bugs from 1 to 8, like 2,3, got "${value}"`,
+    );
+  }
+  return new Set(bugs);
 }
 
 export function required(env: NodeJS.ProcessEnv, name: string): string {
