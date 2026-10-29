@@ -1,0 +1,221 @@
+[
+  {
+    "id": "F10-01",
+    "title": "The merchant sees the state of its reference",
+    "flow": "transition",
+    "reference": {
+      "type": "single",
+      "amountType": "fixed"
+    },
+    "amount": 150.5,
+    "from": ["active", "paid", "cancelled"],
+    "objective": {
+      "step": "view",
+      "expect": "OK"
+    },
+    "tags": ["hu-07"]
+  },
+  {
+    "id": "F10-02",
+    "title": "The merchant sees an expired reference as expired",
+    "flow": "transition",
+    "reference": {
+      "type": "single",
+      "amountType": "fixed",
+      "expiresOn": "2026-11-15"
+    },
+    "amount": 150.5,
+    "time": "2026-11-20T12:00:00-06:00",
+    "from": "expired",
+    "objective": {
+      "step": "view",
+      "expect": "OK"
+    },
+    "tags": ["hu-07"]
+  },
+  {
+    "id": "F10-03",
+    "title": "The merchant cancels an active reference",
+    "flow": "transition",
+    "reference": {
+      "type": ["single", "recurring"],
+      "amountType": "fixed"
+    },
+    "amount": 150.5,
+    "from": "active",
+    "objective": {
+      "step": "cancel",
+      "expect": "OK"
+    },
+    "checks": ["reference-state"],
+    "tags": ["hu-07"]
+  },
+  {
+    "id": "F10-04",
+    "title": "A paid single reference is not cancelled",
+    "flow": "transition",
+    "reference": {
+      "type": "single",
+      "amountType": "fixed"
+    },
+    "amount": 150.5,
+    "from": "paid",
+    "objective": {
+      "step": "cancel",
+      "expect": "R-102"
+    },
+    "checks": ["reference-state"],
+    "tags": ["hu-07"]
+  },
+  {
+    "id": "F10-05",
+    "title": "A cancelled reference is not cancelled again",
+    "flow": "transition",
+    "reference": {
+      "type": "single",
+      "amountType": "fixed"
+    },
+    "amount": 150.5,
+    "from": "cancelled",
+    "objective": {
+      "step": "cancel",
+      "expect": "R-105"
+    },
+    "checks": ["reference-state"],
+    "tags": ["hu-07"]
+  },
+  {
+    "id": "F10-06",
+    "title": "An expired reference is not cancelled",
+    "flow": "transition",
+    "reference": {
+      "type": "single",
+      "amountType": "fixed",
+      "expiresOn": "2026-11-15"
+    },
+    "amount": 150.5,
+    "time": "2026-11-20T12:00:00-06:00",
+    "from": "expired",
+    "objective": {
+      "step": "cancel",
+      "expect": "R-103"
+    },
+    "tags": ["hu-07"]
+  },
+  {
+    "id": "F10-07",
+    "title": "An amount that is not valid does not create a fixed reference",
+    "flow": "payment",
+    "reference": {
+      "type": "single",
+      "amountType": "fixed"
+    },
+    "amount": [0, -1, 150.505],
+    "objective": {
+      "step": "create",
+      "expect": 400
+    },
+    "tags": ["hu-07"]
+  },
+  {
+    "id": "F10-08",
+    "title": "A fixed reference without its amount is not created",
+    "flow": "payment",
+    "reference": {
+      "type": "single",
+      "amountType": "fixed",
+      "amount": null
+    },
+    "amount": 150.5,
+    "objective": {
+      "step": "create",
+      "expect": 400
+    },
+    "tags": ["hu-07"]
+  },
+  {
+    "id": "F10-09",
+    "title": "An open reference with an amount is not created",
+    "flow": "payment",
+    "reference": {
+      "type": "single",
+      "amountType": "open",
+      "amount": 150.5
+    },
+    "amount": 150.5,
+    "objective": {
+      "step": "create",
+      "expect": 400
+    },
+    "tags": ["hu-07"]
+  },
+  {
+    "id": "F10-10",
+    "title": "A reference that expired yesterday is not created",
+    "flow": "payment",
+    "reference": {
+      "type": "single",
+      "amountType": "fixed",
+      "expiresOn": "2026-11-14"
+    },
+    "amount": 150.5,
+    "time": "2026-11-15T12:00:00-06:00",
+    "objective": {
+      "step": "create",
+      "expect": 400
+    },
+    "tags": ["hu-07"]
+  },
+  {
+    "id": "F10-11",
+    "title": "A reference that expires today is created",
+    "flow": "payment",
+    "reference": {
+      "type": "single",
+      "amountType": "fixed",
+      "expiresOn": "2026-11-15"
+    },
+    "amount": 150.5,
+    "time": "2026-11-15T12:00:00-06:00",
+    "objective": {
+      "step": "create",
+      "expect": "OK"
+    },
+    "tags": ["hu-07"]
+  },
+  {
+    "id": "F10-12",
+    "title": "A merchant does not see the reference of another merchant",
+    "flow": "transition",
+    "reference": {
+      "type": "single",
+      "amountType": "fixed"
+    },
+    "amount": 150.5,
+    "from": "active",
+    "objective": {
+      "step": "view",
+      "expect": "R-101",
+      "caller": "another-merchant"
+    },
+    "tags": ["hu-07"]
+  },
+  {
+    "id": "F10-13",
+    "title": "A merchant does not cancel the reference of another merchant",
+    "flow": "transition",
+    "reference": {
+      "type": "single",
+      "amountType": "fixed"
+    },
+    "amount": 150.5,
+    "from": "active",
+    "objective": {
+      "step": "cancel",
+      "expect": "R-101",
+      "caller": "another-merchant"
+    },
+    "checks": ["reference-state"],
+    "tags": ["hu-07"]
+  }
+]

@@ -207,10 +207,105 @@ describe("the catalog", () => {
     ).toThrow(message);
   });
 
-  it("takes the second amount only with the flow that pays twice", () => {
+  it("makes one test per state a transition starts from, and names it", () => {
+    const transition = {
+      ...valid,
+      flow: "transition",
+      from: ["active", "paid"],
+      objective: { step: "cancel", expect: "OK" },
+    };
+    expect(
+      casesFor(supermarket, [transition as never]).map((entry) => [
+        entry.name,
+        entry.from,
+      ]),
+    ).toEqual([
+      ["F01-01__supermarket__single-fixed-from-active", "active"],
+      ["F01-01__supermarket__single-fixed-from-paid", "paid"],
+    ]);
+  });
+
+  it("checks the states a transition can start from", () => {
+    const transition = {
+      ...valid,
+      flow: "transition",
+      objective: { step: "view", expect: "OK" },
+    };
+    expect(() => casesFor(supermarket, [transition as never])).toThrow(
+      "F01-01: from goes with the transition flow",
+    );
     expect(() =>
-      casesFor(supermarket, [{ ...valid, secondAmount: 150.49 } as never]),
-    ).toThrow("F01-01: secondAmount goes with the payment-twice flow");
+      casesFor(supermarket, [{ ...valid, from: "active" } as never]),
+    ).toThrow("F01-01: from goes with the transition flow");
+    expect(() =>
+      casesFor(supermarket, [
+        { ...transition, from: ["active", "expired"] } as never,
+      ]),
+    ).toThrow("F01-01: an expired reference goes in a case of its own");
+    expect(() =>
+      casesFor(supermarket, [{ ...transition, from: "expired" } as never]),
+    ).toThrow("F01-01: an expired reference needs its expiresOn");
+    expect(() =>
+      casesFor(supermarket, [
+        {
+          ...transition,
+          from: "paid",
+          reference: { type: "recurring", amountType: "fixed" },
+        } as never,
+      ]),
+    ).toThrow("F01-01: a recurring reference stays active when it is paid");
+  });
+
+  it("takes each way of calling of 8.9 with the step it fits", () => {
+    const calling = (objective: object) =>
+      casesFor(supermarket, [{ ...valid, objective } as never]);
+    expect(
+      calling({ step: "create", expect: 401, caller: "no-token" }),
+    ).toHaveLength(1);
+    expect(
+      calling({ step: "token", expect: 401, caller: "wrong-key" }),
+    ).toHaveLength(1);
+    expect(() => calling({ step: "token", expect: "OK" })).toThrow(
+      "F01-01: the token step goes with a wrong key",
+    );
+    expect(() =>
+      calling({ step: "create", expect: 401, caller: "wrong-key" }),
+    ).toThrow("F01-01: the token step goes with a wrong key");
+    expect(() =>
+      calling({ step: "inquiry", expect: 400, caller: "malformed-request" }),
+    ).toThrow("F01-01: a malformed request goes with a step that sends a body");
+  });
+
+  it("takes another merchant only for an event of the merchant, from the config of its integration", () => {
+    const byAnother = {
+      ...valid,
+      flow: "transition",
+      from: "active",
+      objective: { step: "view", expect: "R-101", caller: "another-merchant" },
+    };
+    expect(casesFor(supermarket, [byAnother as never])).toHaveLength(1);
+    expect(() =>
+      casesFor(supermarket, [
+        {
+          ...byAnother,
+          objective: { ...byAnother.objective, caller: "merchant-typo" },
+        } as never,
+      ]),
+    ).toThrow(
+      "F01-01: its caller merchant-typo is not among the other merchants of supermarket",
+    );
+    expect(() =>
+      casesFor(supermarket, [
+        {
+          ...valid,
+          objective: {
+            step: "notice",
+            expect: "OK",
+            caller: "another-merchant",
+          },
+        } as never,
+      ]),
+    ).toThrow("F01-01: another merchant goes with an event of the merchant");
   });
 
   it("takes the second sequence only with the flow that pays twice", () => {
@@ -230,6 +325,29 @@ describe("the catalog", () => {
     expect(() => casesFor(supermarket, [secondPayment as never])).toThrow(
       "F01-01: the payment flow of supermarket has no second-payment step",
     );
+  });
+
+  it("sends a fixed reference without its amount when the case says null", () => {
+    const [entry] = entriesOf({
+      type: "single",
+      amountType: "fixed",
+      amount: null,
+    });
+    expect(entry?.reference).toEqual({ type: "single", amountType: "fixed" });
+  });
+
+  it("sends an open reference with an amount only from a case that expects the 400 of the creation", () => {
+    const mistake = {
+      ...valid,
+      reference: { type: "single", amountType: "open", amount: 150.5 },
+      objective: { step: "create", expect: 400 },
+    };
+    const [entry] = casesFor(supermarket, [mistake as never]);
+    expect(entry?.reference).toEqual({
+      type: "single",
+      amountType: "open",
+      amount: 150.5,
+    });
   });
 
   it("fails an amount on an open reference, which PayRef would reject", () => {

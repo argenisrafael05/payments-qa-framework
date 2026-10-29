@@ -144,6 +144,26 @@ describe("the judge", () => {
     });
   });
 
+  it("compares the state the response reports when the step expects one", () => {
+    const view = (status: string) =>
+      answered(coreApi.viewReference, 200, {
+        code: "OK",
+        reference: "12345678901234",
+        status,
+      });
+    expect(
+      judge(view("expired"), { kind: "success", state: "expired" }),
+    ).toMatchObject({ result: "match", found: "OK (expired)" });
+    expect(
+      judge(view("paid"), { kind: "success", state: "active" }),
+    ).toMatchObject({
+      result: "mismatch",
+      check: "state",
+      expected: "OK (active)",
+      found: "OK (paid)",
+    });
+  });
+
   it("never compares the message", () => {
     const verdictFor = (message: string) => {
       const { result, expected, found } = judge(

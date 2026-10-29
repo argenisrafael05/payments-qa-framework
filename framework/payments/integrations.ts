@@ -4,6 +4,12 @@ import { loadData } from "../engine/data.ts";
 
 const directory = new URL("../integrations/", import.meta.url);
 
+// Each one that takes part, as PayRef knows it, and the variable that holds its key.
+const role = z.strictObject({
+  id: z.string().min(1),
+  keyEnv: z.string().min(1),
+});
+
 // An integration is pure config: it picks pieces that already exist.
 const integrationSchema = z.strictObject({
   id: z.string().regex(/^[a-z][a-z0-9-]*$/),
@@ -16,11 +22,13 @@ const integrationSchema = z.strictObject({
   // Whether its payment method inquires before it pays. The inquiry is optional, and some
   // only pay.
   inquiry: z.boolean(),
-  // As PayRef knows it, and the variable that holds its key.
-  paymentMethod: z.strictObject({
-    id: z.string().min(1),
-    keyEnv: z.string().min(1),
-  }),
+  paymentMethod: role,
+  // The merchant that creates its references, and the others some cases ask for, each by an
+  // alias that says what it is for. A case names the alias, never the id.
+  merchant: role,
+  otherMerchants: z
+    .record(z.string().regex(/^[a-z][a-z0-9-]*$/), role)
+    .optional(),
 });
 
 export type Integration = z.infer<typeof integrationSchema>;

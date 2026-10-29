@@ -14,13 +14,12 @@ export function loadEnvFiles(): void {
   }
 }
 
-// What the framework knows of each region of PayRef: where it answers, its database and the
-// merchant it uses.
+// What the framework knows of each region of PayRef: where it answers and its database. Who
+// takes part comes in the config of each integration.
 const regions = {
   mx: {
     portEnv: "PAYREF_MX_PORT",
     database: "payref_mx",
-    merchant: { id: "merchant-mx-1", keyEnv: "MX_MERCHANT_1_KEY" },
   },
 } as const;
 
@@ -34,13 +33,17 @@ export type Environment = {
     password: string;
     database: string;
   };
-  // Each role with its id in PayRef, to read its database, and its key.
-  merchant: { id: string; key: string };
-  paymentMethod: { id: string; key: string };
+  // Each role with its id in PayRef, to read its database, and its key. The other merchants go
+  // by the alias the cases call them.
+  merchant: Role;
+  otherMerchants: Record<string, Role>;
+  paymentMethod: Role;
 };
 
+export type Role = { id: string; key: string };
+
 // PayRef only runs on this machine, so the environment is always the local one. The region
-// resolves the connections and the merchant, and the integration only brings its own key.
+// resolves the connections, and the integration brings who takes part, each with its key.
 export function resolveEnvironment(
   integration: Integration,
   env: NodeJS.ProcessEnv = process.env,
@@ -56,15 +59,21 @@ export function resolveEnvironment(
       password: required(env, "QA_DB_PASSWORD"),
       database: region.database,
     },
-    merchant: {
-      id: region.merchant.id,
-      key: required(env, region.merchant.keyEnv),
-    },
-    paymentMethod: {
-      id: integration.paymentMethod.id,
-      key: required(env, integration.paymentMethod.keyEnv),
-    },
+    merchant: roleOf(integration.merchant, env),
+    otherMerchants: Object.fromEntries(
+      Object.entries(integration.otherMerchants ?? {}).map(
+        ([alias, merchant]) => [alias, roleOf(merchant, env)],
+      ),
+    ),
+    paymentMethod: roleOf(integration.paymentMethod, env),
   };
+}
+
+function roleOf(
+  role: { id: string; keyEnv: string },
+  env: NodeJS.ProcessEnv,
+): Role {
+  return { id: role.id, key: required(env, role.keyEnv) };
 }
 
 function required(env: NodeJS.ProcessEnv, name: string): string {

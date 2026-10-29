@@ -4,7 +4,7 @@ import { loadData } from "../engine/data.ts";
 import type { Expectation } from "../engine/judge.ts";
 import { businessCodes } from "./codes.ts";
 import { extraCheckNames } from "./database/checks.ts";
-import { flowOf } from "./flows/payment.ts";
+import { flowOf, type State } from "./flows/payment.ts";
 import type { Integration } from "./integrations.ts";
 
 const baseCatalog = new URL("../cases/base/", import.meta.url);
@@ -20,14 +20,15 @@ const caseSchema = z.strictObject({
   title: z.string().min(1),
   // The payment, the payment twice, which pays again with the same sequence or a new one, or
   // the payment of a code nobody created.
-  flow: z.enum(["payment", "payment-twice", "unknown-reference"]),
+  flow: z.enum(["payment", "payment-twice", "unknown-reference", "transition"]),
+  // The state a transition starts from (8.6). Its objective is the event.
+  from: axis(z.enum(["active", "paid", "cancelled", "expired"])).optional(),
   // The codes the unknown reference tries, each one a test.
   code: axis(z.string().regex(/^[0-9]+$/)).optional(),
   secondSequence: axis(z.enum(["same", "new"])).optional(),
-  // What the second payment pays, when it is not the same as the first.
-  secondAmount: z.number().optional(),
   // The time the case fixes, with its offset. Only the cases at a time frontier fix it, and
-  // the rest run with the time of the server.
+  // the rest run with the time of the server. A reference that is already expired at that time
+  // is created on its day, at 00:00.
   time: z.iso.datetime({ offset: true }).optional(),
   // How the reference is (8.2). Without expiresOn, it never expires.
   reference: z
@@ -35,8 +36,9 @@ const caseSchema = z.strictObject({
       type: axis(z.enum(["single", "recurring"])),
       amountType: axis(z.enum(["fixed", "open"])),
       expiresOn: axis(z.iso.date().nullable()).optional(),
-      // Only when a fixed reference must be worth something else than what is paid.
-      amount: z.number().optional(),
+      // Only when a fixed reference must be worth something else than what is paid, or null to
+      // send a fixed one without its amount, a mistake of the merchant (HU-07).
+      amount: z.number().nullable().optional(),
     })
     .optional(),
   // What the customer pays, or a list of amounts that each make a test. A fixed reference is
@@ -45,11 +47,27 @@ const caseSchema = z.strictObject({
   // Where the case ends and what it expects there (3.1): a business code, or the HTTP status
   // of a request that must not reach the business.
   objective: z.strictObject({
-    step: z.enum(["inquiry", "request", "notice", "second-payment"]),
+    step: z.enum([
+      "inquiry",
+      "request",
+      "notice",
+      "second-payment",
+      "view",
+      "cancel",
+      "create",
+      "token",
+    ]),
     expect: z.union([
       z.enum(businessCodes),
       z.number().int().min(400).max(599),
     ]),
+    // Who calls the objective when it is not the usual one, as in the first column of 8.9:
+    // without a token, with a made-up token, with a wrong key, with the token of the other role,
+    // with a malformed request, or another merchant, by the alias its integration gives it.
+    caller: z
+      .string()
+      .regex(/^[a-z][a-z0-9-]*$/)
+      .optional(),
   }),
   tags: z.array(z.string().regex(/^[a-z][a-z0-9-]*$/)),
   checks: z.array(z.enum(extraCheckNames)).optional(),
@@ -81,6 +99,7 @@ export type CaseEntry = {
   notApplicable?: string;
   amount: number;
   secondSequence?: "same" | "new";
+  from?: State;
   case: Case;
 };
 
@@ -107,17 +126,13 @@ export function casesFor(
 ): CaseEntry[] {
   const entries = cases.flatMap((item): CaseEntry[] => {
     const notApplicable = applies(item, integration);
+    checkCaller(item, integration);
     if (
       (item.flow === "payment-twice") !==
       (item.secondSequence !== undefined)
     ) {
       throw new Error(
         `${item.id}: secondSequence goes with the payment-twice flow, and only with it`,
-      );
-    }
-    if (item.secondAmount !== undefined && item.flow !== "payment-twice") {
-      throw new Error(
-        `${item.id}: secondAmount goes with the payment-twice flow, and only with it`,
       );
     }
     const unknown = item.flow === "unknown-reference";
@@ -145,24 +160,29 @@ export function casesFor(
         }),
       );
     }
+    checkTransition(item);
     return variationsOf(item).flatMap((variation) =>
-      list(item.secondSequence ?? null).map((secondSequence) => {
-        const name = [
-          variation.variation,
-          secondSequence && `${secondSequence}-sequence`,
-        ]
-          .filter(Boolean)
-          .join("-");
-        return {
-          name: `${item.id}__${integration.id}__${name}`,
-          variation: name,
-          reference: variation.reference,
-          amount: variation.amount,
-          ...(secondSequence === null ? {} : { secondSequence }),
-          ...(notApplicable === undefined ? {} : { notApplicable }),
-          case: item,
-        };
-      }),
+      list(item.secondSequence ?? null).flatMap((secondSequence) =>
+        list(item.from ?? null).map((from) => {
+          const name = [
+            variation.variation,
+            secondSequence && `${secondSequence}-sequence`,
+            from && `from-${from}`,
+          ]
+            .filter(Boolean)
+            .join("-");
+          return {
+            name: `${item.id}__${integration.id}__${name}`,
+            variation: name,
+            reference: variation.reference,
+            amount: variation.amount,
+            ...(secondSequence === null ? {} : { secondSequence }),
+            ...(from === null ? {} : { from }),
+            ...(notApplicable === undefined ? {} : { notApplicable }),
+            case: item,
+          };
+        }),
+      ),
     );
   });
   const names = new Set<string>();
@@ -188,8 +208,14 @@ const missing: Record<string, string> = {
 
 function applies(item: Case, integration: Integration): string | undefined {
   const step = item.objective.step;
+  const transition =
+    item.flow === "transition"
+      ? { from: "active" as const, event: step }
+      : undefined;
   const has = (on: Integration) =>
-    flowOf(item.flow, on).some((each) => each.covers.includes(step));
+    flowOf(item.flow, on, transition).some((each) =>
+      each.covers.includes(step),
+    );
   if (has(integration)) {
     return undefined;
   }
@@ -199,6 +225,85 @@ function applies(item: Case, integration: Integration): string | undefined {
     );
   }
   return `${integration.name} ${missing[step] ?? `has no ${step} step`}, so the case does not apply`;
+}
+
+// The ways a case can call its objective besides the usual one (8.9). Any other caller is
+// another merchant, by the alias its integration gives it.
+export const callerKinds = [
+  "no-token",
+  "invalid-token",
+  "wrong-key",
+  "other-role",
+  "malformed-request",
+] as const;
+
+export type CallerKind = (typeof callerKinds)[number];
+
+export function isCallerKind(caller: string): caller is CallerKind {
+  return (callerKinds as readonly string[]).includes(caller);
+}
+
+// The steps that send a body, which a malformed request breaks.
+const sendsBody = ["create", "request", "notice", "second-payment"];
+
+// Each way of calling goes with the step it fits. Another merchant only asks for what the
+// merchant does with its reference, and the config of the integration says who it is.
+function checkCaller(item: Case, integration: Integration): void {
+  const { step, caller } = item.objective;
+  if ((step === "token") !== (caller === "wrong-key")) {
+    throw new Error(
+      `${item.id}: the token step goes with a wrong key, and a wrong key with the token step`,
+    );
+  }
+  if (caller === undefined || isCallerKind(caller)) {
+    if (caller === "malformed-request" && !sendsBody.includes(step)) {
+      throw new Error(
+        `${item.id}: a malformed request goes with a step that sends a body: create, request, notice or second-payment`,
+      );
+    }
+    return;
+  }
+  if (step !== "view" && step !== "cancel") {
+    throw new Error(
+      `${item.id}: another merchant goes with an event of the merchant, view or cancel`,
+    );
+  }
+  if (integration.otherMerchants?.[caller] === undefined) {
+    throw new Error(
+      `${item.id}: its caller ${caller} is not among the other merchants of ${integration.id}. Add it to framework/integrations/${integration.id}/integration.json`,
+    );
+  }
+}
+
+// A transition starts from a state its reference can be in: only a single one stays paid, and
+// an expired one needs its date and its time, so it goes in a case of its own.
+function checkTransition(item: Case): void {
+  if ((item.flow === "transition") !== (item.from !== undefined)) {
+    throw new Error(
+      `${item.id}: from goes with the transition flow, and only with it`,
+    );
+  }
+  const states = list(item.from ?? []);
+  if (states.includes("expired")) {
+    if (states.length > 1) {
+      throw new Error(
+        `${item.id}: an expired reference goes in a case of its own, with its date and its time`,
+      );
+    }
+    if (item.reference?.expiresOn === undefined || item.time === undefined) {
+      throw new Error(
+        `${item.id}: an expired reference needs its expiresOn and the time of the case`,
+      );
+    }
+  }
+  if (
+    states.includes("paid") &&
+    list(item.reference?.type ?? []).includes("recurring")
+  ) {
+    throw new Error(
+      `${item.id}: a recurring reference stays active when it is paid, so it never starts from paid`,
+    );
+  }
 }
 
 type Variation = { reference: Reference; amount: number; variation: string };
@@ -219,14 +324,26 @@ function variationsOf(item: Case): Variation[] {
     for (const amountType of list(item.reference.amountType)) {
       for (const expiresOn of list(item.reference.expiresOn ?? null)) {
         for (const amount of list(item.amount)) {
-          if (amountType === "open" && item.reference.amount !== undefined) {
+          // An open reference with an amount is a mistake of the merchant: it only reaches PayRef
+          // from a case that ends at the creation and expects its 400.
+          const merchantMistake =
+            item.objective.step === "create" && item.objective.expect === 400;
+          const given = item.reference.amount;
+          if (
+            amountType === "open" &&
+            typeof given === "number" &&
+            !merchantMistake
+          ) {
             throw new Error(
               `${item.id}: reference.amount is only for a fixed reference`,
             );
           }
           const reference: Reference = { type, amountType };
-          if (amountType === "fixed") {
-            reference.amount = item.reference.amount ?? amount;
+          if (amountType === "fixed" && given !== null) {
+            reference.amount = given ?? amount;
+          }
+          if (amountType === "open" && typeof given === "number") {
+            reference.amount = given;
           }
           if (expiresOn !== null) {
             reference.expiresOn = expiresOn;

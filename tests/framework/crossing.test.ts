@@ -25,6 +25,13 @@ function kiosk() {
       notice: "together",
       inquiry: false,
       paymentMethod: { id: "kiosk", keyEnv: "MX_KIOSK_KEY" },
+      merchant: { id: "merchant-mx-1", keyEnv: "MX_MERCHANT_1_KEY" },
+      otherMerchants: {
+        "another-merchant": {
+          id: "merchant-mx-2",
+          keyEnv: "MX_MERCHANT_2_KEY",
+        },
+      },
     }),
   );
   return loadIntegration("kiosk", pathToFileURL(`${directory}/`));
@@ -88,6 +95,7 @@ describe("the catalog crossed with each integration", () => {
           database: "payref_mx",
         },
         merchant: { id: "merchant-mx-1", key: "merchant-key" },
+        otherMerchants: {},
         paymentMethod: { id: "kiosk", key: "kiosk-key" },
       },
       version: "1.1",

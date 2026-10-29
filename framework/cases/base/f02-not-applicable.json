@@ -5,7 +5,10 @@
     "flow": "unknown-reference",
     "code": ["0000000000000", "00000000000000", "000000000000000"],
     "amount": 150.5,
-    "objective": { "step": "request", "expect": "R-101" },
+    "objective": {
+      "step": "request",
+      "expect": "R-101"
+    },
     "tags": ["hu-02", "hu-08", "hu-09"]
   },
   {
@@ -19,7 +22,26 @@
     },
     "amount": 150.5,
     "time": "2026-11-20T12:00:00-06:00",
-    "objective": { "step": "request", "expect": "R-103" },
+    "objective": {
+      "step": "request",
+      "expect": "R-103"
+    },
+    "tags": ["hu-02", "hu-08", "hu-09"]
+  },
+  {
+    "id": "F02-03",
+    "title": "A cancelled reference is not paid",
+    "flow": "transition",
+    "from": "cancelled",
+    "reference": {
+      "type": ["single", "recurring"],
+      "amountType": "fixed"
+    },
+    "amount": 150.5,
+    "objective": {
+      "step": "request",
+      "expect": "R-105"
+    },
     "tags": ["hu-02", "hu-08", "hu-09"]
   }
 ]

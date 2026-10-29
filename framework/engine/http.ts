@@ -38,6 +38,8 @@ export type OperationTemplate = {
   success: { code: string; requires: readonly string[] };
   // The API's codes, translated to PayRef's.
   codes: Readonly<Record<string, string>>;
+  // The field with the state of what the response describes, when it has one.
+  stateField?: string;
   // Hidden in the evidence copy (RNF-05).
   secrets?: { request?: readonly string[]; response?: readonly string[] };
   // Only an operation that can be repeated without risk is retried (3.1).
@@ -54,6 +56,15 @@ export type Call = {
   path: string;
   token?: string;
   body?: JsonObject;
+  // The time of this call, when it is not the one of the case.
+  testTime?: string;
+};
+
+// What a case can change in the call of its objective (8.9): another token or none at all, or
+// the body cut before its end, like a request that broke on the way.
+export type CallChange = {
+  token?: string | null;
+  breakBody?: boolean;
 };
 
 // The gateway sends these when the system did not answer (8.5).
@@ -68,6 +79,7 @@ export class Http {
   readonly #maxAttempts: number;
   readonly #retryDelayMs: number;
   readonly #testTime: string | undefined;
+  #change: CallChange = {};
 
   constructor(options: {
     transport: Transport;
@@ -75,7 +87,8 @@ export class Http {
     recorder: Recorder;
     maxAttempts?: number;
     retryDelayMs?: number;
-    // The time the case fixes, sent with every call. It stays visible in the evidence.
+    // The time the case fixes, sent with every call that does not bring its own. It stays
+    // visible in the evidence.
     testTime?: string;
   }) {
     this.#transport = options.transport;
@@ -86,21 +99,39 @@ export class Http {
     this.#testTime = options.testTime;
   }
 
+  // The same wrapper, with what the case changes in the call of its objective.
+  with(change: CallChange): Http {
+    const http = new Http({
+      transport: this.#transport,
+      baseUrl: this.#baseUrl,
+      recorder: this.#recorder,
+      maxAttempts: this.#maxAttempts,
+      retryDelayMs: this.#retryDelayMs,
+      testTime: this.#testTime,
+    });
+    http.#change = change;
+    return http;
+  }
+
   async call(template: OperationTemplate, call: Call): Promise<Exchange> {
     const request: HttpRequest = {
       method: call.method,
       url: `${this.#baseUrl}${call.path}`,
       headers: {},
     };
-    if (call.token !== undefined) {
-      request.headers.authorization = `Bearer ${call.token}`;
+    const token =
+      this.#change.token === undefined ? call.token : this.#change.token;
+    if (typeof token === "string") {
+      request.headers.authorization = `Bearer ${token}`;
     }
-    if (this.#testTime !== undefined) {
-      request.headers["x-test-time"] = this.#testTime;
+    const testTime = call.testTime ?? this.#testTime;
+    if (testTime !== undefined) {
+      request.headers["x-test-time"] = testTime;
     }
     if (call.body !== undefined) {
       request.headers["content-type"] = "application/json";
-      request.body = JSON.stringify(call.body);
+      const body = JSON.stringify(call.body);
+      request.body = this.#change.breakBody === true ? body.slice(0, -1) : body;
     }
 
     const attempts = template.repeatable ? this.#maxAttempts : 1;

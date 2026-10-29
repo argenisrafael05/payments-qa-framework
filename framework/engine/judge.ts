@@ -4,13 +4,19 @@ import { findLeak } from "./leaks.ts";
 // What a step expects: a success, an exact business code or an exact HTTP status. The steps
 // before the objective only expect a success (3.1).
 export type Expectation =
-  | { kind: "success" }
+  | { kind: "success"; state?: string }
   | { kind: "code"; code: string }
   | { kind: "status"; status: number };
 
 // The piece that decided, in the order the judge reads a response.
 export type JudgeCheck =
-  "leak" | "transport" | "format" | "success" | "code" | "unclassified";
+  | "leak"
+  | "transport"
+  | "format"
+  | "success"
+  | "state"
+  | "code"
+  | "unclassified";
 
 // What the response says, apart from the verdict: a payment the API confirmed counts even when
 // the case expected a rejection, because the database has to match it (HU-01).
@@ -99,9 +105,18 @@ export function judge(exchange: Exchange, expectation: Expectation): Verdict {
     if (missing.length > 0) {
       return mismatch("success", `${success} without ${missing.join(" and ")}`);
     }
-    return expectation.kind === "success"
-      ? match(success)
-      : mismatch("code", success);
+    if (expectation.kind !== "success") {
+      return mismatch("code", success);
+    }
+    // The state it reports, read from the field its template says, when the case expects one.
+    if (expectation.state !== undefined) {
+      const state = body[template.stateField ?? "status"];
+      const found = `${success} (${String(state)})`;
+      return state === expectation.state
+        ? match(found)
+        : mismatch("state", found);
+    }
+    return match(success);
   }
 
   // 5. The code, translated with the dictionary of its API.
@@ -121,7 +136,9 @@ export function judge(exchange: Exchange, expectation: Expectation): Verdict {
 export function describe(expectation: Expectation): string {
   switch (expectation.kind) {
     case "success":
-      return "OK";
+      return expectation.state === undefined
+        ? "OK"
+        : `OK (${expectation.state})`;
     case "code":
       return expectation.code;
     case "status":
