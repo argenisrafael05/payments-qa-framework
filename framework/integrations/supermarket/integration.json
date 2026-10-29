@@ -1,0 +1,8 @@
+{
+  "id": "supermarket",
+  "name": "Supermarket",
+  "region": "mx",
+  "contract": "standard",
+  "notice": "together",
+  "paymentMethod": { "id": "supermarket", "keyEnv": "MX_SUPERMARKET_KEY" }
+}

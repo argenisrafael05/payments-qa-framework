@@ -37,5 +37,14 @@ export default defineConfig([
   {
     files: ["tests/specs/**/*.ts"],
     extends: [playwright.configs["flat/recommended"]],
+    rules: {
+      // The cases never call expect(): the judge decides, and approve() tells Playwright.
+      "playwright/expect-expect": [
+        "warn",
+        { assertFunctionNames: ["approve"] },
+      ],
+      // The tags come from each case's JSON, and the catalog validates them when it loads.
+      "playwright/valid-test-tags": "off",
+    },
   },
 ]);

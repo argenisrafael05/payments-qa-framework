@@ -1,0 +1,11 @@
+[
+  {
+    "id": "F01-01",
+    "title": "A single reference with a fixed amount is paid",
+    "flow": "payment",
+    "reference": { "type": "single", "amountType": "fixed", "amount": 150.5 },
+    "objective": { "step": "notice", "expect": "OK" },
+    "checks": ["reference-paid"],
+    "tags": ["smoke"]
+  }
+]
