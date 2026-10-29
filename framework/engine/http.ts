@@ -29,7 +29,7 @@ export type Transport = {
 };
 
 // How to read the responses of one operation. Every difference between APIs lives here, as
-// data, so the judge never needs an if per API.
+// data, so the judge never needs an if per API (3.1).
 export type OperationTemplate = {
   // The status that means the request reached the business.
   businessStatus: number;
@@ -38,9 +38,9 @@ export type OperationTemplate = {
   success: { code: string; requires: readonly string[] };
   // The API's codes, translated to PayRef's.
   codes: Readonly<Record<string, string>>;
-  // Hidden in the evidence copy.
+  // Hidden in the evidence copy (RNF-05).
   secrets?: { request?: readonly string[]; response?: readonly string[] };
-  // Only an operation that can be repeated without risk is retried.
+  // Only an operation that can be repeated without risk is retried (3.1).
   repeatable: boolean;
 };
 
@@ -56,10 +56,10 @@ export type Call = {
   body?: JsonObject;
 };
 
-// The gateway sends these when the system did not answer.
+// The gateway sends these when the system did not answer (8.5).
 const gatewayStatuses = [408, 502, 503, 504];
 
-// The wrapper of every call: it sends through the transport, retries only what failed
+// The wrapper of every call (HU-01): it sends through the transport, retries only what failed
 // on the way, and leaves each attempt in the evidence.
 export class Http {
   readonly #transport: Transport;
@@ -67,6 +67,7 @@ export class Http {
   readonly #recorder: Recorder;
   readonly #maxAttempts: number;
   readonly #retryDelayMs: number;
+  readonly #testTime: string | undefined;
 
   constructor(options: {
     transport: Transport;
@@ -74,12 +75,15 @@ export class Http {
     recorder: Recorder;
     maxAttempts?: number;
     retryDelayMs?: number;
+    // The time the case fixes, sent with every call. It stays visible in the evidence.
+    testTime?: string;
   }) {
     this.#transport = options.transport;
     this.#baseUrl = options.baseUrl;
     this.#recorder = options.recorder;
     this.#maxAttempts = options.maxAttempts ?? 3;
     this.#retryDelayMs = options.retryDelayMs ?? 250;
+    this.#testTime = options.testTime;
   }
 
   async call(template: OperationTemplate, call: Call): Promise<Exchange> {
@@ -90,6 +94,9 @@ export class Http {
     };
     if (call.token !== undefined) {
       request.headers.authorization = `Bearer ${call.token}`;
+    }
+    if (this.#testTime !== undefined) {
+      request.headers["x-test-time"] = this.#testTime;
     }
     if (call.body !== undefined) {
       request.headers["content-type"] = "application/json";

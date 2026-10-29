@@ -1,13 +1,13 @@
 import type { Verdict } from "./judge.ts";
 import type { CheckOutcome } from "./runner.ts";
 
-// The four results. In the code, the files and the console they are in English, like
+// The four results (8.5). In the code, the files and the console they are in English, like
 // the report.
 export const results = ["passed", "failed", "inconclusive", "not_run"] as const;
 export type Result = (typeof results)[number];
 
 // Something that kept the case from passing. "failed" says the system did something else,
-// and "inconclusive" says it could not be tested.
+// and "inconclusive" says it could not be tested (8.5).
 export type Problem = { result: "failed" | "inconclusive"; reason: string };
 
 // The decision table of the case result lives in these functions and in decide().
@@ -53,7 +53,7 @@ export function checkProblem(
   }
 }
 
-// An error of the framework itself never counts as a bug of PayRef.
+// An error of the framework itself never counts as a bug of PayRef (8.5).
 export function frameworkProblem(error: unknown): Problem {
   const message = error instanceof Error ? error.message : String(error);
   return { result: "inconclusive", reason: `framework error: ${message}` };
@@ -67,7 +67,7 @@ export type Decision = {
 };
 
 // The first problem decides, and what came after it is kept apart, without hiding it.
-// A passed case is approved only with its evidence complete.
+// A passed case is approved only with its evidence complete (8.5).
 export function decide(
   problems: readonly Problem[],
   gaps: readonly string[],

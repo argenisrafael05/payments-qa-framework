@@ -1,6 +1,6 @@
 import { defineConfig } from "vitest/config";
 
-// The framework's own tests, at component level: no PayRef and no Docker.
+// The framework's own tests, at component level: no PayRef and no Docker (RNF-02).
 export default defineConfig({
   test: {
     include: ["tests/framework/**/*.test.ts"],

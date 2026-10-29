@@ -44,7 +44,7 @@ export const test = base.extend<{ cases: Cases }, { run: RunSetup; db: Pool }>({
       },
     });
     // A case that ran out of time, or whose run was interrupted, is closed here, with its
-    // last check of the database.
+    // last check of the database (HU-01).
     if (execution !== undefined && !execution.finished) {
       await execution.close(
         testInfo.status === "timedOut"
@@ -55,7 +55,7 @@ export const test = base.extend<{ cases: Cases }, { run: RunSetup; db: Pool }>({
   },
 });
 
-// What Playwright shows: green only for an approved case, skipped for one that never
+// What Playwright shows (8.5): green only for an approved case, skipped for one that never
 // started, and failed for the rest, with our result and its reason. The result itself lives in
 // the case's file, and that one is the truth.
 export function approve(record: CaseRecord): void {

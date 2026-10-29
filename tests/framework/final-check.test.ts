@@ -10,7 +10,7 @@ import {
 } from "../../framework/payments/database/final-check.ts";
 import type { Movement } from "../../framework/payments/database/readings.ts";
 
-// The final check of the database, with controlled rows.
+// The final check of the database, with controlled rows (HU-01).
 
 const confirmed: ConfirmedPayment = {
   folio: "MX-0000000001",
@@ -68,7 +68,18 @@ describe("the final check of the database", () => {
     expect(compareMovements([confirmed], [different])).toMatchObject({
       result: "mismatch",
       detail:
-        "MX-0000000001 has status reversed, and the API confirmed confirmed; MX-0000000001 has amount 100.00, and the API confirmed 150.50",
+        "MX-0000000001 is reversed, not confirmed; MX-0000000001 has amount 100.00, and the API confirmed 150.5",
+    });
+  });
+
+  it("finds an amount the database rounded, which two decimals would hide", () => {
+    // 150.504 shown with two decimals is 150.50, the same as what the database kept.
+    const rounded = { ...stored, amount: "150.50" };
+    expect(
+      compareMovements([{ ...confirmed, amount: 150.504 }], [rounded]),
+    ).toMatchObject({
+      result: "mismatch",
+      detail: "MX-0000000001 has amount 150.50, and the API confirmed 150.504",
     });
   });
 

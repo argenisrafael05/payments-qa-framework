@@ -3,7 +3,7 @@ import type { ReadingRecord } from "../../engine/evidence.ts";
 import type { CheckOutcome } from "../../engine/runner.ts";
 
 // The readings have business names, and the SQL lives only here, never in a case. The same
-// reading serves the evidence and the check.
+// reading serves the evidence and the check (3.1).
 
 export type Movement = {
   folio: string | null;

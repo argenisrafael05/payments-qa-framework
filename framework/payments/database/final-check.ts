@@ -2,7 +2,7 @@ import type { CheckOutcome, DatabaseCheck } from "../../engine/runner.ts";
 import type { ConfirmedPayment, PaymentContext } from "../context.ts";
 import { movementsOf, unavailable, type Movement } from "./readings.ts";
 
-// The database has the last word: the movements of the reference must match what the
+// The database has the last word (HU-01): the movements of the reference must match what the
 // API confirmed, no more and no less. It runs once at the end of every case, also after a
 // failure, because the most expensive bug is an error that still left the payment.
 export const finalCheck: DatabaseCheck<PaymentContext> = {
@@ -44,9 +44,16 @@ export function compareMovements(
       differences.push(`${payment.folio} is not in the database`);
       continue;
     }
+    if (movement.status !== "confirmed") {
+      differences.push(`${payment.folio} is ${movement.status}, not confirmed`);
+    }
+    // The exact amount: comparing with two decimals would hide an amount the database rounded.
+    if (Number(movement.amount) !== payment.amount) {
+      differences.push(
+        `${payment.folio} has amount ${movement.amount}, and the API confirmed ${payment.amount}`,
+      );
+    }
     const expected = {
-      status: "confirmed",
-      amount: payment.amount.toFixed(2),
       paymentMethodId: payment.paymentMethodId,
       authorization: payment.authorization,
       sequence: payment.sequence,

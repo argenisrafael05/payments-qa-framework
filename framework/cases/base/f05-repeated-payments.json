@@ -1,0 +1,34 @@
+[
+  {
+    "id": "F05-01",
+    "title": "A paid single reference takes no other payment",
+    "flow": "payment-twice",
+    "reference": { "type": "single", "amountType": "fixed" },
+    "amount": 150.5,
+    "secondSequence": ["same", "new"],
+    "objective": { "step": "second-payment", "expect": "R-102" },
+    "tags": ["hu-02", "hu-09"]
+  },
+  {
+    "id": "F05-02",
+    "title": "A repeated notice on a recurring reference is rejected",
+    "flow": "payment-twice",
+    "reference": { "type": "recurring", "amountType": "fixed" },
+    "amount": 150.5,
+    "secondSequence": "same",
+    "objective": { "step": "second-payment", "expect": "R-106" },
+    "tags": ["hu-02", "hu-09"],
+    "notes": "PayRef 1.0 registers it as another payment: that is its bug 1."
+  },
+  {
+    "id": "F05-03",
+    "title": "A recurring reference takes a new payment",
+    "flow": "payment-twice",
+    "reference": { "type": "recurring", "amountType": "fixed" },
+    "amount": 150.5,
+    "secondSequence": "new",
+    "objective": { "step": "second-payment", "expect": "OK" },
+    "checks": ["reference-state"],
+    "tags": ["hu-02", "hu-09"]
+  }
+]

@@ -1,6 +1,7 @@
 import swagger from "@fastify/swagger";
 import Fastify from "fastify";
 import { createAuth } from "./auth.ts";
+import { registerClock } from "./clock.ts";
 import { loadConfig, loadRegion } from "./config.ts";
 import { createPool, prepareDatabase } from "./db.ts";
 import { registerErrorHandling } from "./errors.ts";
@@ -22,11 +23,12 @@ await app.register(swagger, {
   openapi: { info: { title: "PayRef", version: config.version } },
 });
 registerErrorHandling(app);
+registerClock(app, config);
 
 const auth = createAuth(region);
 auth.register(app);
 registerReferences(app, { db, region, auth });
-registerPayments(app, { db, region, auth });
+registerPayments(app, { db, region, auth, bugs: config.bugs });
 
 app.get("/health", { schema: { hide: true } }, async (_request, reply) => {
   const instance = { region: config.region, version: config.version };

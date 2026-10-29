@@ -1,0 +1,46 @@
+[
+  {
+    "id": "F06-01",
+    "title": "A reference is paid until the last second of its day, in the time of its region",
+    "flow": "payment",
+    "reference": {
+      "type": ["single", "recurring"],
+      "amountType": ["fixed", "open"],
+      "expiresOn": "2026-11-15"
+    },
+    "amount": 150.5,
+    "time": "2026-11-15T23:59:59-06:00",
+    "objective": { "step": "notice", "expect": "OK" },
+    "tags": ["hu-02", "hu-09"],
+    "notes": "PayRef 1.0 takes it as expired a day early: that is its bug 3."
+  },
+  {
+    "id": "F06-02",
+    "title": "A reference expires at midnight of its region",
+    "flow": "payment",
+    "reference": {
+      "type": ["single", "recurring"],
+      "amountType": ["fixed", "open"],
+      "expiresOn": "2026-11-15"
+    },
+    "amount": 150.5,
+    "time": "2026-11-16T00:00:00-06:00",
+    "objective": { "step": "request", "expect": "R-103" },
+    "tags": ["hu-02", "hu-09"]
+  },
+  {
+    "id": "F06-03",
+    "title": "The expiry counts the day of the region, not the one of UTC",
+    "flow": "payment",
+    "reference": {
+      "type": ["single", "recurring"],
+      "amountType": ["fixed", "open"],
+      "expiresOn": "2026-11-15"
+    },
+    "amount": 150.5,
+    "time": "2026-11-15T23:30:00-06:00",
+    "objective": { "step": "notice", "expect": "OK" },
+    "tags": ["hu-02", "hu-09"],
+    "notes": "At 23:30 in Mexico it is already the next day in UTC."
+  }
+]

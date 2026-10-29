@@ -4,6 +4,7 @@
 | ------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------- |
 | 0.1     | Octubre 2026 | Versión inicial                                                                |
 | 0.2     | Octubre 2026 | Cambios de la revisión estática y del [análisis de pruebas](test-analysis.md) |
+| 0.3     | Octubre 2026 | La consulta solo informa y el pago siempre valida (HU-08)                      |
 
 ## 1. Visión
 
@@ -172,9 +173,9 @@ Como merchant, quiero crear referencias de pago, consultarlas y cancelarlas, par
 Como payment method estándar, por ejemplo un súper, quiero consultar una referencia y avisar el pago cuando el cliente ya pagó, para que el pago quede registrado en el orquestador.
 
 - Entra con su propia llave y recibe un token.
-- Puede consultar la referencia antes de cobrar. Si no aplica, la consulta responde el mismo rechazo que daría la solicitud, y nunca registra nada.
+- Puede consultar la referencia antes de cobrar, si su integración consulta. La consulta solo informa: responde los datos de la referencia y su estado, o R-101 si no existe, sin validar el negocio y sin registrar nada.
 - Manda la solicitud y el aviso, juntos o por separado según su configuración. La solicitud, o la llamada que junta las dos, trae su secuencia y recibe folio y autorización si la referencia aplica. Por separado, el aviso trae el folio de su solicitud.
-- La solicitud valida por su cuenta, aunque nadie haya consultado antes.
+- La solicitud valida siempre, por su cuenta, se haya consultado o no.
 - Si la referencia no aplica (no existe, está vencida, cancelada o ya pagada, o el monto no es válido), recibe el código de rechazo que corresponde.
 - Un monto no es válido si es cero o negativo, si trae más decimales de los que permite su región, si es distinto al fijo o si sale de los topes del payment method, que valen incluidos. Se rechaza con R-104 y nunca se redondea.
 - Si pide una operación que no tiene configurada, como reversar, recibe un 403.

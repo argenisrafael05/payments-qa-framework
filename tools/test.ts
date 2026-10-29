@@ -11,8 +11,8 @@ import {
 import type { RunSetup } from "../framework/payments/run-setup.ts";
 
 // npm test [-- <integration>... <Playwright options>]: one run per integration, one after the
-// other. The names come first, and from the first option on, everything goes to
-// Playwright as it is, like --grep @smoke. Each run starts with the quick check.
+// other (HU-01). The names come first, and from the first option on, everything goes to
+// Playwright as it is, like --grep @smoke. Each run starts with the quick check (RE-17).
 loadEnvFiles();
 const integrations = listIntegrations();
 const selected: string[] = [];

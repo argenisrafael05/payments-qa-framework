@@ -6,16 +6,22 @@ import { casesFor, loadCatalog } from "../../framework/payments/catalog.ts";
 import { loadIntegration } from "../../framework/payments/integrations.ts";
 import { temporaryDirectory } from "./builders.ts";
 
-// A typo fails when the catalog loads, before anything runs, and says where.
+// A typo fails when the catalog loads, before anything runs, and says where (HU-03).
 
 const valid = {
   id: "F01-01",
   title: "A single reference with a fixed amount is paid",
   flow: "payment",
-  reference: { type: "single", amountType: "fixed", amount: 150.5 },
+  reference: { type: "single", amountType: "fixed" },
+  amount: 150.5,
   objective: { step: "notice", expect: "OK" },
   tags: ["smoke"],
 };
+
+const supermarket = loadIntegration("supermarket");
+
+const entriesOf = (reference: object, amount: number | number[] = 150.5) =>
+  casesFor(supermarket, [{ ...valid, reference, amount } as never]);
 
 function catalogWith(files: Record<string, unknown[]>): URL {
   const directory = temporaryDirectory();
@@ -80,16 +86,189 @@ describe("the catalog", () => {
   });
 
   it("names each test with its case, its integration and its variation", () => {
-    const supermarket = loadIntegration("supermarket");
     const [entry] = casesFor(supermarket, [valid as never]);
     expect(entry?.name).toBe("F01-01__supermarket__single-fixed");
   });
 
-  it("keeps the real catalog valid", () => {
-    const names = casesFor(loadIntegration("supermarket")).map(
-      (entry) => entry.name,
+  it("makes one test per value of each list", () => {
+    const names = entriesOf({
+      type: ["single", "recurring"],
+      amountType: ["fixed", "open"],
+      expiresOn: [null, "2099-12-31"],
+    }).map((entry) => entry.variation);
+    expect(names).toEqual([
+      "single-fixed",
+      "single-fixed-2099-12-31",
+      "single-open",
+      "single-open-2099-12-31",
+      "recurring-fixed",
+      "recurring-fixed-2099-12-31",
+      "recurring-open",
+      "recurring-open-2099-12-31",
+    ]);
+  });
+
+  it("creates a fixed reference with what is paid, and an open one without an amount", () => {
+    const [fixed, open] = entriesOf({
+      type: "single",
+      amountType: ["fixed", "open"],
+      expiresOn: "2099-12-31",
+    });
+    expect(fixed?.reference).toEqual({
+      type: "single",
+      amountType: "fixed",
+      amount: 150.5,
+      expiresOn: "2099-12-31",
+    });
+    expect(open?.reference).toEqual({
+      type: "single",
+      amountType: "open",
+      expiresOn: "2099-12-31",
+    });
+  });
+
+  it("makes one test per amount when the case lists them, and names it", () => {
+    const entries = entriesOf(
+      { type: "single", amountType: "fixed", amount: 150.5 },
+      [150.49, 150.51],
     );
+    expect(entries.map((entry) => [entry.variation, entry.amount])).toEqual([
+      ["single-fixed-150.49", 150.49],
+      ["single-fixed-150.51", 150.51],
+    ]);
+    expect(entries.map((entry) => entry.reference?.amount)).toEqual([
+      150.5, 150.5,
+    ]);
+  });
+
+  it("creates each fixed reference with its own amount when the case does not say another", () => {
+    const entries = entriesOf(
+      { type: "single", amountType: "fixed" },
+      [1, 10000],
+    );
+    expect(entries.map((entry) => entry.reference?.amount)).toEqual([1, 10000]);
+  });
+
+  it("lets a fixed reference be worth something else than what is paid", () => {
+    const [entry] = entriesOf(
+      { type: "single", amountType: "fixed", amount: 150.5 },
+      150.51,
+    );
+    expect(entry?.reference?.amount).toBe(150.5);
+  });
+
+  it("pays twice with the same sequence or a new one, and says it in the name", () => {
+    const twice = {
+      ...valid,
+      flow: "payment-twice",
+      secondSequence: ["same", "new"],
+      objective: { step: "second-payment", expect: "R-102" },
+    };
+    expect(
+      casesFor(supermarket, [twice as never]).map((entry) => [
+        entry.name,
+        entry.secondSequence,
+      ]),
+    ).toEqual([
+      ["F01-01__supermarket__single-fixed-same-sequence", "same"],
+      ["F01-01__supermarket__single-fixed-new-sequence", "new"],
+    ]);
+  });
+
+  it("tries each code nobody created, and names the test after it", () => {
+    const unknown = {
+      id: "F02-01",
+      title: "A code nobody created is not found",
+      flow: "unknown-reference",
+      code: ["0000000000000", "00000000000000"],
+      amount: 150.5,
+      objective: { step: "request", expect: "R-101" },
+      tags: [],
+    };
+    expect(
+      casesFor(supermarket, [unknown as never]).map((entry) => [
+        entry.name,
+        entry.code,
+        entry.reference,
+      ]),
+    ).toEqual([
+      ["F02-01__supermarket__0000000000000", "0000000000000", undefined],
+      ["F02-01__supermarket__00000000000000", "00000000000000", undefined],
+    ]);
+  });
+
+  it("takes a code only in the flow that pays an unknown reference, and a reference in the rest", () => {
+    const message = "the unknown-reference flow takes a code and no reference";
+    expect(() =>
+      casesFor(supermarket, [{ ...valid, code: "123" } as never]),
+    ).toThrow(message);
+    expect(() =>
+      casesFor(supermarket, [{ ...valid, flow: "unknown-reference" } as never]),
+    ).toThrow(message);
+  });
+
+  it("takes the second amount only with the flow that pays twice", () => {
+    expect(() =>
+      casesFor(supermarket, [{ ...valid, secondAmount: 150.49 } as never]),
+    ).toThrow("F01-01: secondAmount goes with the payment-twice flow");
+  });
+
+  it("takes the second sequence only with the flow that pays twice", () => {
+    expect(() =>
+      casesFor(supermarket, [{ ...valid, secondSequence: "same" } as never]),
+    ).toThrow("F01-01: secondSequence goes with the payment-twice flow");
+    expect(() =>
+      casesFor(supermarket, [{ ...valid, flow: "payment-twice" } as never]),
+    ).toThrow("F01-01: secondSequence goes with the payment-twice flow");
+  });
+
+  it("fails an objective that is not a step of its flow", () => {
+    const secondPayment = {
+      ...valid,
+      objective: { step: "second-payment", expect: "R-102" },
+    };
+    expect(() => casesFor(supermarket, [secondPayment as never])).toThrow(
+      "F01-01: the payment flow of supermarket has no second-payment step",
+    );
+  });
+
+  it("fails an amount on an open reference, which PayRef would reject", () => {
+    expect(() =>
+      entriesOf({ type: "single", amountType: "open", amount: 150.5 }),
+    ).toThrow("F01-01: reference.amount is only for a fixed reference");
+  });
+
+  it("fails a list that repeats a value", () => {
+    expect(() =>
+      entriesOf({ type: ["single", "single"], amountType: "fixed" }),
+    ).toThrow("F01-01__supermarket__single-fixed comes out twice");
+  });
+
+  it("fails a time without its offset, which would be read in another zone", () => {
+    const noOffset = { ...valid, time: "2026-11-15T23:59:59" };
+    expect(() => loadCatalog(catalogWith({ "f06.json": [noOffset] }))).toThrow(
+      /time/,
+    );
+    const withOffset = { ...valid, time: "2026-11-15T23:59:59-06:00" };
+    expect(loadCatalog(catalogWith({ "f06.json": [withOffset] }))).toEqual([
+      withOffset,
+    ]);
+  });
+
+  it("fails a date that is not a date", () => {
+    const wrongDate = {
+      ...valid,
+      reference: { ...valid.reference, expiresOn: "2099-13-01" },
+    };
+    expect(() => loadCatalog(catalogWith({ "f01.json": [wrongDate] }))).toThrow(
+      /reference\.expiresOn/,
+    );
+  });
+
+  it("keeps the real catalog valid", () => {
+    const names = casesFor(supermarket).map((entry) => entry.name);
     expect(names).toContain("F01-01__supermarket__single-fixed");
+    expect(names).toContain("F01-01__supermarket__recurring-open-2099-12-31");
   });
 
   it("says which integrations exist when one does not", () => {

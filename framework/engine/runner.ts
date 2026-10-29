@@ -11,11 +11,13 @@ import {
 export type Step<C> = {
   name: string;
   title: string;
-  // It executes a call, or it observes in the database what someone else did.
+  // It executes a call, or it observes in the database what someone else did (HU-01).
   kind: "executes" | "observes";
   // The business steps it carries out, as a case names them in its objective.
   covers: readonly string[];
   run(context: C): Promise<Exchange>;
+  // What it expects, from what the next step expects. Without it, it only has to succeed.
+  expects?(next: Expectation): Expectation;
   // Keeps what the next steps need, from a response that succeeded.
   keep?(context: C, body: JsonObject): void;
 };
@@ -28,7 +30,7 @@ export type CheckOutcome = {
   readings: ReadingRecord[];
 };
 
-// A check reads the database. It never reads a response: that is the judge's job.
+// A check reads the database. It never reads a response: that is the judge's job (3.1).
 export type DatabaseCheck<C> = {
   name: string;
   title: string;
@@ -39,22 +41,23 @@ export type CasePlan<C> = {
   // Up to the objective, which is the last one.
   steps: readonly Step<C>[];
   objective: Expectation;
-  // The extra checks the case asks for by name.
+  // The extra checks the case asks for by name (3.1).
   checks: readonly DatabaseCheck<C>[];
   finalCheck: DatabaseCheck<C>;
 };
 
 const success: Expectation = { kind: "success" };
 
-// Runs a case to its objective. The steps before it only have to succeed, and the case
+// Runs a case to its objective (3.1). The steps before it only have to succeed, and the case
 // stops at the first problem. The extra checks come after, and the final check of the
-// database always runs, once.
+// database always runs, once (HU-01).
 export async function runCase<C>(
   plan: CasePlan<C>,
   context: C,
   recorder: Recorder,
 ): Promise<CaseRecord> {
   recorder.plan(plan.steps, plan.checks);
+  const expectations = expectationsOf(plan);
   let stopped = false;
 
   for (const [index, step] of plan.steps.entries()) {
@@ -62,12 +65,11 @@ export async function runCase<C>(
     if (recorder.finished) {
       break;
     }
-    const last = index === plan.steps.length - 1;
     recorder.beginStep(index);
     try {
       const verdict = judge(
         await step.run(context),
-        last ? plan.objective : success,
+        expectations[index] ?? success,
       );
       recorder.endStep(verdict);
       if (verdict.succeeded && verdict.body !== undefined) {
@@ -83,7 +85,7 @@ export async function runCase<C>(
     }
   }
 
-  // After a problem the extra checks do not run: they are not a diagnosis.
+  // After a problem the extra checks do not run: they are not a diagnosis (HU-01).
   for (const [index, check] of plan.checks.entries()) {
     if (stopped || recorder.finished) {
       break;
@@ -94,6 +96,23 @@ export async function runCase<C>(
 
   await finalCheck(plan, context, recorder);
   return recorder.finish();
+}
+
+// The objective is what the last step expects. The steps before it only have to succeed,
+// unless they say they expect what the next one does.
+function expectationsOf<C>(plan: CasePlan<C>): Expectation[] {
+  const expectations: Expectation[] = [];
+  let next = plan.objective;
+  for (let index = plan.steps.length - 1; index >= 0; index--) {
+    const step = plan.steps[index];
+    const expectation =
+      index === plan.steps.length - 1
+        ? plan.objective
+        : (step?.expects?.(next) ?? success);
+    expectations[index] = expectation;
+    next = expectation;
+  }
+  return expectations;
 }
 
 // Closes a case that could not finish on its own, like one that ran out of time or a run that

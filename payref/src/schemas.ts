@@ -113,6 +113,7 @@ export const inquirySchema = {
   },
   response: responses({
     reference: referenceCode,
+    status: { type: "string", enum: ["active", "paid", "cancelled"] },
     type: referenceType,
     amountType: amountTypes,
     amount,
@@ -132,7 +133,12 @@ export const paymentSchema = {
     type: "object",
     properties: {
       reference: referenceCode,
-      amount,
+      // Any number: the business decides, so an amount that is not valid gets R-104.
+      amount: {
+        type: "number",
+        description:
+          "Any number. An amount that is not valid for the reference gets R-104, and it is never rounded.",
+      },
       sequence: { type: "string", minLength: 1, maxLength: 40 },
     },
     required: ["reference", "amount", "sequence"],

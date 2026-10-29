@@ -1,0 +1,40 @@
+[
+  {
+    "id": "F04-01",
+    "title": "A code nobody created answers that before its invalid amount",
+    "flow": "unknown-reference",
+    "code": "00000000000000",
+    "amount": -1,
+    "objective": { "step": "request", "expect": "R-101" },
+    "tags": ["hu-09"],
+    "notes": "Row 2 of the validation order."
+  },
+  {
+    "id": "F04-02",
+    "title": "An expired reference answers that before its invalid amount",
+    "flow": "payment",
+    "reference": {
+      "type": ["single", "recurring"],
+      "amountType": "fixed",
+      "expiresOn": "2026-11-15",
+      "amount": 150.5
+    },
+    "amount": 150.49,
+    "time": "2026-11-20T12:00:00-06:00",
+    "objective": { "step": "request", "expect": "R-103" },
+    "tags": ["hu-09"],
+    "notes": "Row 4 of the validation order."
+  },
+  {
+    "id": "F04-03",
+    "title": "An invalid amount answers that before the single reference that is paid",
+    "flow": "payment-twice",
+    "reference": { "type": "single", "amountType": "fixed" },
+    "amount": 150.5,
+    "secondSequence": "new",
+    "secondAmount": 150.49,
+    "objective": { "step": "second-payment", "expect": "R-104" },
+    "tags": ["hu-09"],
+    "notes": "Row 5 of the validation order."
+  }
+]

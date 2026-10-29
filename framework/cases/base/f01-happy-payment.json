@@ -1,11 +1,16 @@
 [
   {
     "id": "F01-01",
-    "title": "A single reference with a fixed amount is paid",
+    "title": "A reference of each type is paid",
     "flow": "payment",
-    "reference": { "type": "single", "amountType": "fixed", "amount": 150.5 },
+    "reference": {
+      "type": ["single", "recurring"],
+      "amountType": ["fixed", "open"],
+      "expiresOn": [null, "2099-12-31"]
+    },
+    "amount": 150.5,
     "objective": { "step": "notice", "expect": "OK" },
-    "checks": ["reference-paid"],
-    "tags": ["smoke"]
+    "checks": ["reference-state"],
+    "tags": ["smoke", "hu-01", "hu-08"]
   }
 ]
