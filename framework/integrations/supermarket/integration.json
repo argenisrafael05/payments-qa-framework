@@ -9,6 +9,7 @@
     "id": "supermarket",
     "keyEnv": "MX_SUPERMARKET_KEY"
   },
+  "amountLimits": { "min": 1, "max": 10000 },
   "merchant": {
     "id": "merchant-mx-1",
     "keyEnv": "MX_MERCHANT_1_KEY"

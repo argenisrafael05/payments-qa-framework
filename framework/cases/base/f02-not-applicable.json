@@ -3,8 +3,7 @@
     "id": "F02-01",
     "title": "A code nobody created is not found, whatever its length",
     "flow": "unknown-reference",
-    "code": ["0000000000000", "00000000000000", "000000000000000"],
-    "amount": 150.5,
+    "code": ["short", "exact", "long", "other-region"],
     "objective": {
       "step": "request",
       "expect": "R-101"
@@ -20,8 +19,7 @@
       "amountType": ["fixed", "open"],
       "expiresOn": "2026-11-15"
     },
-    "amount": 150.5,
-    "time": "2026-11-20T12:00:00-06:00",
+    "time": "2026-11-20T12:00:00",
     "objective": {
       "step": "request",
       "expect": "R-103"
@@ -37,7 +35,6 @@
       "type": ["single", "recurring"],
       "amountType": "fixed"
     },
-    "amount": 150.5,
     "objective": {
       "step": "request",
       "expect": "R-105"

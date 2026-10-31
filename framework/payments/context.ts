@@ -7,12 +7,17 @@ import { MerchantApi } from "./clients/MerchantApi.ts";
 import { StandardPaymentMethodApi } from "./clients/StandardPaymentMethodApi.ts";
 import type { Environment, Role } from "./environment.ts";
 
-export type ConfirmedPayment = {
+// A payment the API answered OK, as the database must keep it: pending while the window of its
+// request runs, confirmed by its notice or by the end of its window, or reversed.
+export type ExpectedPayment = {
   folio: string;
   authorization: string;
   amount: number;
   sequence: string;
   paymentMethodId: string;
+  status: "pending" | "confirmed" | "reversed";
+  // When the window confirmed it on its own, at the end of the window.
+  confirmedAt?: string;
 };
 
 // Everything a case carries from one step to the next. Each case has its own, so the
@@ -39,8 +44,15 @@ export type PaymentContext = {
   // another merchant or the other role (8.9).
   caller?: Role;
   tokens: { merchant?: string; paymentMethod?: string; caller?: string };
-  // What the API confirmed. The database has to match it at the end (HU-01).
-  confirmed: ConfirmedPayment[];
+  // The time the case fixes, and the one its event arrives at, after the request (HU-10).
+  time?: string;
+  eventTime?: string;
+  // The request that waits for its notice, by the folio it got, and the one of a second
+  // payment.
+  requested?: { folio: string };
+  secondRequested?: { folio: string };
+  // What the API answered OK. The database has to match it at the end (HU-01).
+  payments: ExpectedPayment[];
   // The merchant cancelled the reference, and the API confirmed it.
   cancelled?: boolean;
 };
@@ -65,6 +77,8 @@ export function createContext(options: {
   environment: Environment;
   reference?: Reference;
   creationTime?: string;
+  time?: string;
+  eventTime?: string;
   caller?: Role;
   code?: string;
   amount: number;
@@ -82,6 +96,8 @@ export function createContext(options: {
     paymentMethod: options.environment.paymentMethod,
     reference: options.reference,
     creationTime: options.creationTime,
+    time: options.time,
+    eventTime: options.eventTime,
     caller: options.caller,
     created: options.code === undefined ? undefined : { code: options.code },
     amount: options.amount,
@@ -93,7 +109,7 @@ export function createContext(options: {
           ? first
           : sequence(),
     tokens: {},
-    confirmed: [],
+    payments: [],
   };
 }
 

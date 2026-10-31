@@ -7,7 +7,6 @@
       "type": "single",
       "amountType": "fixed"
     },
-    "amount": 150.5,
     "from": ["active", "paid", "cancelled"],
     "objective": {
       "step": "view",
@@ -24,8 +23,7 @@
       "amountType": "fixed",
       "expiresOn": "2026-11-15"
     },
-    "amount": 150.5,
-    "time": "2026-11-20T12:00:00-06:00",
+    "time": "2026-11-20T12:00:00",
     "from": "expired",
     "objective": {
       "step": "view",
@@ -41,7 +39,6 @@
       "type": ["single", "recurring"],
       "amountType": "fixed"
     },
-    "amount": 150.5,
     "from": "active",
     "objective": {
       "step": "cancel",
@@ -58,7 +55,6 @@
       "type": "single",
       "amountType": "fixed"
     },
-    "amount": 150.5,
     "from": "paid",
     "objective": {
       "step": "cancel",
@@ -75,7 +71,6 @@
       "type": "single",
       "amountType": "fixed"
     },
-    "amount": 150.5,
     "from": "cancelled",
     "objective": {
       "step": "cancel",
@@ -93,8 +88,7 @@
       "amountType": "fixed",
       "expiresOn": "2026-11-15"
     },
-    "amount": 150.5,
-    "time": "2026-11-20T12:00:00-06:00",
+    "time": "2026-11-20T12:00:00",
     "from": "expired",
     "objective": {
       "step": "cancel",
@@ -110,7 +104,7 @@
       "type": "single",
       "amountType": "fixed"
     },
-    "amount": [0, -1, 150.505],
+    "amount": [0, -1, "extra-decimal"],
     "objective": {
       "step": "create",
       "expect": 400
@@ -126,7 +120,6 @@
       "amountType": "fixed",
       "amount": null
     },
-    "amount": 150.5,
     "objective": {
       "step": "create",
       "expect": 400
@@ -140,9 +133,8 @@
     "reference": {
       "type": "single",
       "amountType": "open",
-      "amount": 150.5
+      "amount": 100
     },
-    "amount": 150.5,
     "objective": {
       "step": "create",
       "expect": 400
@@ -158,8 +150,7 @@
       "amountType": "fixed",
       "expiresOn": "2026-11-14"
     },
-    "amount": 150.5,
-    "time": "2026-11-15T12:00:00-06:00",
+    "time": "2026-11-15T12:00:00",
     "objective": {
       "step": "create",
       "expect": 400
@@ -175,8 +166,7 @@
       "amountType": "fixed",
       "expiresOn": "2026-11-15"
     },
-    "amount": 150.5,
-    "time": "2026-11-15T12:00:00-06:00",
+    "time": "2026-11-15T12:00:00",
     "objective": {
       "step": "create",
       "expect": "OK"
@@ -191,7 +181,6 @@
       "type": "single",
       "amountType": "fixed"
     },
-    "amount": 150.5,
     "from": "active",
     "objective": {
       "step": "view",
@@ -208,7 +197,6 @@
       "type": "single",
       "amountType": "fixed"
     },
-    "amount": 150.5,
     "from": "active",
     "objective": {
       "step": "cancel",

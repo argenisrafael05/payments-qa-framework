@@ -4,10 +4,32 @@ import { loadData } from "../engine/data.ts";
 import type { Expectation } from "../engine/judge.ts";
 import { businessCodes } from "./codes.ts";
 import { extraCheckNames } from "./database/checks.ts";
-import { flowOf, type State } from "./flows/payment.ts";
+import {
+  flowOf,
+  isPaymentState,
+  paymentStates,
+  referenceStates,
+  type State,
+} from "./flows/payment.ts";
 import type { Integration } from "./integrations.ts";
+import { regions } from "./regions.ts";
 
 const baseCatalog = new URL("../cases/base/", import.meta.url);
+
+// The amounts a case writes by what they are, so it runs in any region (HU-03): each one
+// becomes the number of its integration.
+export const amountNames = [
+  "min",
+  "max",
+  "below-min",
+  "above-max",
+  "below-fixed",
+  "above-fixed",
+  "extra-decimal",
+] as const;
+
+// The lengths of a code, around the one of its region, and the one of the other region.
+export const codeLengths = ["short", "exact", "long", "other-region"] as const;
 
 // An axis of the reference takes one value, or a list that makes one test per value (HU-03).
 function axis<T extends z.ZodType>(value: T) {
@@ -21,15 +43,30 @@ const caseSchema = z.strictObject({
   // The payment, the payment twice, which pays again with the same sequence or a new one, or
   // the payment of a code nobody created.
   flow: z.enum(["payment", "payment-twice", "unknown-reference", "transition"]),
-  // The state a transition starts from (8.6). Its objective is the event.
-  from: axis(z.enum(["active", "paid", "cancelled", "expired"])).optional(),
-  // The codes the unknown reference tries, each one a test.
-  code: axis(z.string().regex(/^[0-9]+$/)).optional(),
+  // The state a transition starts from: one of its reference (8.6), or one of the payment of a
+  // bank after its request (8.7). Its objective is the event.
+  from: axis(z.enum([...referenceStates, ...paymentStates])).optional(),
+  // At which frontier of the reversal window the event arrives, for a transition from a pending
+  // payment: a second before the window ends, or when it ends. The framework turns it into the
+  // time of the window of each integration. Without it, the event comes right after the request.
+  after: z.enum(["before-window-end", "window-end"]).optional(),
+  // The codes the unknown reference tries, each one a test: digits, or a length of its region,
+  // one digit short, exact or one digit long, or the length of the other region.
+  code: axis(
+    z.union([z.string().regex(/^[0-9]+$/), z.enum(codeLengths)]),
+  ).optional(),
   secondSequence: axis(z.enum(["same", "new"])).optional(),
-  // The time the case fixes, with its offset. Only the cases at a time frontier fix it, and
-  // the rest run with the time of the server. A reference that is already expired at that time
-  // is created on its day, at 00:00.
-  time: z.iso.datetime({ offset: true }).optional(),
+  // The time the case fixes, in the time of its region and without its zone, which the
+  // framework adds. Only the cases at a time frontier fix it, and the rest run with the time of
+  // the server. A reference that is already expired at that time is created on its day, at 00:00.
+  time: z
+    .string()
+    .regex(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/,
+      "a date and time without its zone, like 2026-11-15T23:59:59",
+    )
+    .refine((time) => !Number.isNaN(Date.parse(time)), "a real date and time")
+    .optional(),
   // How the reference is (8.2). Without expiresOn, it never expires.
   reference: z
     .strictObject({
@@ -41,9 +78,12 @@ const caseSchema = z.strictObject({
       amount: z.number().nullable().optional(),
     })
     .optional(),
-  // What the customer pays, or a list of amounts that each make a test. A fixed reference is
-  // created with it.
-  amount: axis(z.number()),
+  // What the customer pays, or a list that makes a test of each. A number, or a name that the
+  // framework turns into the number of the integration: the limits of its payment method,
+  // one unit around the fixed amount, or one decimal more than its region allows. A fixed
+  // reference is created with it, or with the ordinary amount when the name goes around it.
+  // Without it, the case pays the ordinary amount of its region.
+  amount: axis(z.union([z.number(), z.enum(amountNames)])).optional(),
   // Where the case ends and what it expects there (3.1): a business code, or the HTTP status
   // of a request that must not reach the business.
   objective: z.strictObject({
@@ -52,6 +92,7 @@ const caseSchema = z.strictObject({
       "request",
       "notice",
       "second-payment",
+      "reversal",
       "view",
       "cancel",
       "create",
@@ -127,6 +168,7 @@ export function casesFor(
   const entries = cases.flatMap((item): CaseEntry[] => {
     const notApplicable = applies(item, integration);
     checkCaller(item, integration);
+    const amounts = item.amount ?? regions[integration.region].amount;
     if (
       (item.flow === "payment-twice") !==
       (item.secondSequence !== undefined)
@@ -146,14 +188,14 @@ export function casesFor(
     }
     if (unknown) {
       return list(item.code ?? []).flatMap((code) =>
-        list(item.amount).map((amount) => {
-          const listed = Array.isArray(item.amount) ? `-${amount}` : "";
+        list(amounts).map((given) => {
+          const listed = Array.isArray(item.amount) ? `-${given}` : "";
           const name = `${code}${listed}`;
           return {
             name: `${item.id}__${integration.id}__${name}`,
             variation: name,
-            code,
-            amount,
+            code: codeOf(code, integration),
+            amount: amountOf(given, integration),
             ...(notApplicable === undefined ? {} : { notApplicable }),
             case: item,
           };
@@ -161,7 +203,7 @@ export function casesFor(
       );
     }
     checkTransition(item);
-    return variationsOf(item).flatMap((variation) =>
+    return variationsOf(item, amounts, integration).flatMap((variation) =>
       list(item.secondSequence ?? null).flatMap((secondSequence) =>
         list(item.from ?? null).map((from) => {
           const name = [
@@ -216,15 +258,29 @@ function applies(item: Case, integration: Integration): string | undefined {
     flowOf(item.flow, on, transition).some((each) =>
       each.covers.includes(step),
     );
-  if (has(integration)) {
-    return undefined;
+  if (!has(integration)) {
+    if (!has(everythingOn(integration))) {
+      throw new Error(
+        `${item.id}: the ${item.flow} flow of ${integration.id} has no ${step} step`,
+      );
+    }
+    return `${integration.name} ${missing[step] ?? `has no ${step} step`}, so the case does not apply`;
   }
-  if (!has(everythingOn(integration))) {
-    throw new Error(
-      `${item.id}: the ${item.flow} flow of ${integration.id} has no ${step} step`,
-    );
+  // The payment of a bank in its window, and its reversal, come with the window (HU-10).
+  const withoutWindow =
+    (step === "reversal" || list(item.from ?? []).some(isPaymentState)) &&
+    integration.reversalWindow === undefined;
+  // A 403 without a caller is an operation the payment method does not have (8.9), like the
+  // reversal without the window. The other 403 of 8.9, the token of the other role, always says
+  // who calls. It runs only where its integration lacks the operation.
+  if (item.objective.expect === 403 && item.objective.caller === undefined) {
+    return withoutWindow
+      ? undefined
+      : `${integration.name} has the ${step}, so the case does not apply`;
   }
-  return `${integration.name} ${missing[step] ?? `has no ${step} step`}, so the case does not apply`;
+  return withoutWindow
+    ? `${integration.name} has no reversal window, so the case does not apply`
+    : undefined;
 }
 
 // The ways a case can call its objective besides the usual one (8.9). Any other caller is
@@ -244,7 +300,63 @@ export function isCallerKind(caller: string): caller is CallerKind {
 }
 
 // The steps that send a body, which a malformed request breaks.
-const sendsBody = ["create", "request", "notice", "second-payment"];
+const sendsBody = ["create", "request", "notice", "second-payment", "reversal"];
+
+// The number of an amount in this integration. One unit is the smallest of its region: a cent
+// in Mexico and a whole one in South America.
+function amountOf(
+  given: number | (typeof amountNames)[number],
+  integration: Integration,
+): number {
+  if (typeof given === "number") {
+    return given;
+  }
+  const region = regions[integration.region];
+  const unit = 10 ** -region.decimals;
+  const { min, max } = integration.amountLimits;
+  const exact = (value: number, decimals: number) =>
+    Number(value.toFixed(decimals));
+  switch (given) {
+    case "min":
+      return min;
+    case "max":
+      return max;
+    case "below-min":
+      return exact(min - unit, region.decimals);
+    case "above-max":
+      return exact(max + unit, region.decimals);
+    case "below-fixed":
+      return exact(region.amount - unit, region.decimals);
+    case "above-fixed":
+      return exact(region.amount + unit, region.decimals);
+    case "extra-decimal":
+      return exact(
+        region.amount + 5 * 10 ** -(region.decimals + 1),
+        region.decimals + 1,
+      );
+  }
+}
+
+// A code nobody created, of the length the case asks for in its region. Each region keeps
+// everything in its own database, so a code of the other region does not exist here either
+// (HU-09). PayRef has two regions, so the other one is the one that is not its own.
+function codeOf(given: string, integration: Integration): string {
+  const length = regions[integration.region].referenceLength;
+  switch (given) {
+    case "short":
+      return "0".repeat(length - 1);
+    case "exact":
+      return "0".repeat(length);
+    case "long":
+      return "0".repeat(length + 1);
+    case "other-region": {
+      const other = integration.region === "mx" ? "sa" : "mx";
+      return "0".repeat(regions[other].referenceLength);
+    }
+    default:
+      return given;
+  }
+}
 
 // Each way of calling goes with the step it fits. Another merchant only asks for what the
 // merchant does with its reference, and the config of the integration says who it is.
@@ -258,7 +370,7 @@ function checkCaller(item: Case, integration: Integration): void {
   if (caller === undefined || isCallerKind(caller)) {
     if (caller === "malformed-request" && !sendsBody.includes(step)) {
       throw new Error(
-        `${item.id}: a malformed request goes with a step that sends a body: create, request, notice or second-payment`,
+        `${item.id}: a malformed request goes with a step that sends a body: ${sendsBody.join(", ")}`,
       );
     }
     return;
@@ -284,6 +396,11 @@ function checkTransition(item: Case): void {
     );
   }
   const states = list(item.from ?? []);
+  if (item.after !== undefined && states.some((state) => state !== "pending")) {
+    throw new Error(
+      `${item.id}: after counts from the request, so it goes with a transition from pending`,
+    );
+  }
   if (states.includes("expired")) {
     if (states.length > 1) {
       throw new Error(
@@ -315,7 +432,11 @@ function list<T>(value: T | T[]): T[] {
   return Array.isArray(value) ? value : [value];
 }
 
-function variationsOf(item: Case): Variation[] {
+function variationsOf(
+  item: Case,
+  amounts: Case["amount"] & {},
+  integration: Integration,
+): Variation[] {
   const variations: Variation[] = [];
   if (item.reference === undefined) {
     return variations;
@@ -323,15 +444,16 @@ function variationsOf(item: Case): Variation[] {
   for (const type of list(item.reference.type)) {
     for (const amountType of list(item.reference.amountType)) {
       for (const expiresOn of list(item.reference.expiresOn ?? null)) {
-        for (const amount of list(item.amount)) {
+        for (const given of list(amounts)) {
+          const amount = amountOf(given, integration);
           // An open reference with an amount is a mistake of the merchant: it only reaches PayRef
           // from a case that ends at the creation and expects its 400.
           const merchantMistake =
             item.objective.step === "create" && item.objective.expect === 400;
-          const given = item.reference.amount;
+          const created = item.reference.amount;
           if (
             amountType === "open" &&
-            typeof given === "number" &&
+            typeof created === "number" &&
             !merchantMistake
           ) {
             throw new Error(
@@ -339,16 +461,20 @@ function variationsOf(item: Case): Variation[] {
             );
           }
           const reference: Reference = { type, amountType };
-          if (amountType === "fixed" && given !== null) {
-            reference.amount = given ?? amount;
+          if (amountType === "fixed" && created !== null) {
+            reference.amount =
+              created ??
+              (given === "below-fixed" || given === "above-fixed"
+                ? regions[integration.region].amount
+                : amount);
           }
-          if (amountType === "open" && typeof given === "number") {
-            reference.amount = given;
+          if (amountType === "open" && typeof created === "number") {
+            reference.amount = created;
           }
           if (expiresOn !== null) {
             reference.expiresOn = expiresOn;
           }
-          const listed = Array.isArray(item.amount) ? String(amount) : null;
+          const listed = Array.isArray(item.amount) ? String(given) : null;
           variations.push({
             reference,
             amount,

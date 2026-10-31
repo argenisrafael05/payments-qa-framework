@@ -1,5 +1,10 @@
 import { need, type PaymentStep } from "../context.ts";
-import { payTogether } from "./payments.ts";
+import {
+  paymentNotice,
+  paymentRequest,
+  payTogether,
+  reversal,
+} from "./payments.ts";
 
 // What the merchant does with its reference after creating it (HU-07).
 
@@ -44,5 +49,26 @@ export const payFirst: PaymentStep = {
   ...payTogether,
   name: "pay-first",
   title: "The payment method pays the reference first",
+  covers: [],
+};
+
+export const requestFirst: PaymentStep = {
+  ...paymentRequest,
+  name: "request-first",
+  title: "The payment method sends the request first",
+  covers: [],
+};
+
+export const noticeFirst: PaymentStep = {
+  ...paymentNotice,
+  name: "notice-first",
+  title: "The payment method sends the notice first",
+  covers: [],
+};
+
+export const reversalFirst: PaymentStep = {
+  ...reversal,
+  name: "reversal-first",
+  title: "The payment method reverses the payment first",
   covers: [],
 };
