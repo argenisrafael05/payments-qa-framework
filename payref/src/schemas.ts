@@ -162,6 +162,30 @@ export type PaymentBody = {
   sequence: string;
 };
 
+export type PaymentNoticeBody = { folio: string };
+
+// The notice of a request that came alone, by the folio the request gave.
+export const paymentNoticeSchema = {
+  tags: ["payment method"],
+  body: {
+    type: "object",
+    properties: { folio: { type: "string", minLength: 1, maxLength: 20 } },
+    required: ["folio"],
+    additionalProperties: false,
+  },
+  response: responses({
+    folio: { type: "string" },
+    authorization: { type: "string" },
+  }),
+};
+
+// The reversal of a pending payment, by the folio its request gave, while its window runs.
+export const reversalSchema = {
+  tags: ["payment method"],
+  body: paymentNoticeSchema.body,
+  response: responses({ folio: { type: "string" } }),
+};
+
 export const paymentSchema = {
   tags: ["payment method"],
   body: {

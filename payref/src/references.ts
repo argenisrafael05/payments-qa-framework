@@ -6,6 +6,7 @@ import { nowOf, regionDate } from "./clock.ts";
 import type { RegionConfig } from "./config.ts";
 import { rejections } from "./errors.ts";
 import { checkExpiry, decimalsOf } from "./rules.ts";
+import { hasPaymentInWindow, settleWindows } from "./window.ts";
 import {
   cancelReferenceSchema,
   createReferenceSchema,
@@ -97,6 +98,7 @@ export function registerReferences(
     "/references/:reference",
     { schema: viewReferenceSchema, preHandler: auth.allow("merchant") },
     async (request) => {
+      await settleWindows(db, region, request.params.reference, nowOf(request));
       const reference = await ownReference(
         db,
         request.params.reference,
@@ -123,11 +125,13 @@ export function registerReferences(
   );
 
   // Only an active reference is cancelled. One that no longer is answers its own code, in the
-  // order of 8.4: cancelled, expired, and a single that is paid (HU-07).
+  // order of 8.4: cancelled, expired, and a single that is paid (HU-07). While the reversal
+  // window of a payment runs, it is not cancelled either (HU-10).
   app.post<{ Params: ReferenceParams }>(
     "/references/:reference/cancellation",
     { schema: cancelReferenceSchema, preHandler: auth.allow("merchant") },
     async (request) => {
+      await settleWindows(db, region, request.params.reference, nowOf(request));
       const reference = await ownReference(
         db,
         request.params.reference,
@@ -150,6 +154,9 @@ export function registerReferences(
       }
       if (reference.status === "paid") {
         return rejections.alreadyPaid;
+      }
+      if (await hasPaymentInWindow(db, region, reference.code)) {
+        return rejections.paymentInProgress;
       }
       await db.query(
         "UPDATE payment_references SET status = 'cancelled' WHERE code = ?",
