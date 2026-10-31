@@ -7,6 +7,7 @@
 | 0.3     | Octubre 2026 | La consulta solo informa y el pago siempre valida (HU-08)                       |
 | 0.4     | Octubre 2026 | Cancelar una referencia vencida responde R-103 (HU-07)                          |
 | 0.5     | Octubre 2026 | La config de cada integración trae sus merchants, cada uno con un alias (HU-03) |
+| 0.6     | Octubre 2026 | Lo que cambia por región en un caso lo pone el framework (HU-03)                |
 
 ## 1. Visión
 
@@ -97,7 +98,7 @@ Como equipo de QA, quiero conectar una integración nueva o agregar un caso nuev
 - El banco entra solo con su configuración, sin código propio: su ventana de reverso es una regla que se prende en su JSON.
 - La config de cada integración trae su payment method y sus merchants: el que crea sus referencias y los otros que piden algunos casos, cada uno con un alias que dice para qué es. Un caso nombra el alias, nunca el id, y si un id cambia, solo cambia la config.
 - Un caso nuevo es un JSON que dice su flujo, su referencia y su objetivo: el paso donde termina y el código que espera.
-- Un caso del catálogo base corre en todas las integraciones que pueden hacerlo, sin copiarlo. Las que no pueden lo enseñan en el reporte como No ejecutado, con su razón.
+- Un caso del catálogo base corre en todas las integraciones que pueden hacerlo, sin copiarlo. Lo que cambia por región, como un monto de frontera, el largo del código o la hora, el caso lo dice por lo que es y el framework pone el número de cada región. Las que no pueden lo enseñan en el reporte como No ejecutado, con su razón.
 - Si un eje de la referencia trae una lista, sale una prueba por cada valor.
 - Un error de dedo en un caso o en una integración falla al cargar: la corrida no empieza, y el error dice qué archivo y qué campo están mal.
 - Una integración con un contrato distinto trae solo su cliente y su traducción. Los flujos, el juez y la evidencia no cambian.

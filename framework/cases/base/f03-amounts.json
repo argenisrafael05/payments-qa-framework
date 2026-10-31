@@ -6,10 +6,9 @@
     "reference": {
       "type": ["single", "recurring"],
       "amountType": "fixed",
-      "expiresOn": [null, "2099-12-31"],
-      "amount": 150.5
+      "expiresOn": [null, "2099-12-31"]
     },
-    "amount": [150.49, 150.51],
+    "amount": ["below-fixed", "above-fixed"],
     "objective": { "step": "request", "expect": "R-104" },
     "tags": ["hu-02", "hu-08"]
   },
@@ -22,7 +21,7 @@
       "amountType": "open",
       "expiresOn": [null, "2099-12-31"]
     },
-    "amount": [1, 10000],
+    "amount": ["min", "max"],
     "objective": { "step": "notice", "expect": "OK" },
     "tags": ["hu-02", "hu-08"]
   },
@@ -35,7 +34,7 @@
       "amountType": "open",
       "expiresOn": [null, "2099-12-31"]
     },
-    "amount": [0.99, 10000.01],
+    "amount": ["below-min", "above-max"],
     "objective": { "step": "request", "expect": "R-104" },
     "tags": ["hu-02", "hu-08"]
   },
@@ -61,7 +60,7 @@
       "amountType": "open",
       "expiresOn": [null, "2099-12-31"]
     },
-    "amount": [150.505],
+    "amount": ["extra-decimal"],
     "objective": { "step": "request", "expect": "R-104" },
     "tags": ["hu-02", "hu-08"],
     "notes": "PayRef 1.0 rounds it and accepts it: that is its bug 2."

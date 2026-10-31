@@ -31,13 +31,14 @@ function contextWith(
       amount: 150.5,
       sequence: "supermarket-1",
       paymentMethodId: "supermarket",
+      status: "confirmed",
     },
   ];
   return {
     db,
     reference: { type, amountType: "fixed", amount: 150.5 },
     created: { code: "12345678901234" },
-    confirmed,
+    payments: confirmed,
   } as unknown as PaymentContext;
 }
 

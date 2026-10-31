@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import type { Integration } from "./integrations.ts";
+import { regions } from "./regions.ts";
 
 const root = new URL("../../", import.meta.url);
 
@@ -13,15 +14,6 @@ export function loadEnvFiles(): void {
     }
   }
 }
-
-// What the framework knows of each region of PayRef: where it answers and its database. Who
-// takes part comes in the config of each integration.
-const regions = {
-  mx: {
-    portEnv: "PAYREF_MX_PORT",
-    database: "payref_mx",
-  },
-} as const;
 
 export type Environment = {
   name: string;

@@ -62,11 +62,11 @@ describe("the catalog", () => {
   });
 
   it("fails an objective that the flow does not have", () => {
-    const reversal = {
+    const refund = {
       ...valid,
-      objective: { step: "reversal", expect: "OK" },
+      objective: { step: "refund", expect: "OK" },
     };
-    expect(() => loadCatalog(catalogWith({ "f01.json": [reversal] }))).toThrow(
+    expect(() => loadCatalog(catalogWith({ "f01.json": [refund] }))).toThrow(
       /objective\.step/,
     );
   });
@@ -256,6 +256,43 @@ describe("the catalog", () => {
     ).toThrow("F01-01: a recurring reference stays active when it is paid");
   });
 
+  it("takes after only in a transition from a pending payment, because it counts from the request", () => {
+    const bank = loadIntegration("bank");
+    const window = {
+      ...valid,
+      flow: "transition",
+      from: "pending",
+      after: "window-end",
+      objective: { step: "reversal", expect: "R-107" },
+    };
+    expect(casesFor(bank, [window as never])).toHaveLength(1);
+    expect(() =>
+      casesFor(bank, [{ ...window, from: ["pending", "confirmed"] } as never]),
+    ).toThrow("F01-01: after counts from the request");
+    expect(() =>
+      loadCatalog(catalogWith({ "f07.json": [{ ...window, after: "2:00" }] })),
+    ).toThrow(/after/);
+  });
+
+  it("pays the ordinary amount of its region when the case does not say one", () => {
+    const { amount, ...withoutAmount } = valid;
+    expect(amount).toBe(150.5);
+    const [mexico] = casesFor(supermarket, [withoutAmount as never]);
+    const [southAmerica] = casesFor(loadIntegration("bank"), [
+      withoutAmount as never,
+    ]);
+    expect(mexico).toMatchObject({
+      name: "F01-01__supermarket__single-fixed",
+      amount: 150.5,
+      reference: { amount: 150.5 },
+    });
+    expect(southAmerica).toMatchObject({
+      name: "F01-01__bank__single-fixed",
+      amount: 100,
+      reference: { amount: 100 },
+    });
+  });
+
   it("takes each way of calling of 8.9 with the step it fits", () => {
     const calling = (objective: object) =>
       casesFor(supermarket, [{ ...valid, objective } as never]);
@@ -362,15 +399,60 @@ describe("the catalog", () => {
     ).toThrow("F01-01__supermarket__single-fixed comes out twice");
   });
 
-  it("fails a time without its offset, which would be read in another zone", () => {
-    const noOffset = { ...valid, time: "2026-11-15T23:59:59" };
-    expect(() => loadCatalog(catalogWith({ "f06.json": [noOffset] }))).toThrow(
+  it("takes the time of a case without its zone, because it is the time of its region", () => {
+    const local = { ...valid, time: "2026-11-15T23:59:59" };
+    expect(loadCatalog(catalogWith({ "f06.json": [local] }))).toEqual([local]);
+    const withZone = { ...valid, time: "2026-11-15T23:59:59-06:00" };
+    expect(() => loadCatalog(catalogWith({ "f06.json": [withZone] }))).toThrow(
       /time/,
     );
-    const withOffset = { ...valid, time: "2026-11-15T23:59:59-06:00" };
-    expect(loadCatalog(catalogWith({ "f06.json": [withOffset] }))).toEqual([
-      withOffset,
+  });
+
+  it("turns the names of the amounts into the numbers of each integration", () => {
+    const open = {
+      ...valid,
+      reference: { type: "single", amountType: "open" },
+      amount: ["min", "max", "below-min", "above-max", "extra-decimal"],
+    };
+    const fixed = {
+      ...valid,
+      reference: { type: "single", amountType: "fixed" },
+      amount: ["below-fixed", "above-fixed"],
+    };
+    const bank = loadIntegration("bank");
+    const amounts = (integration: typeof bank, item: object) =>
+      casesFor(integration, [item as never]).map((entry) => entry.amount);
+    expect(amounts(supermarket, open)).toEqual([
+      1, 10000, 0.99, 10000.01, 150.505,
     ]);
+    expect(amounts(bank, open)).toEqual([10, 50000, 9, 50001, 100.5]);
+    expect(amounts(supermarket, fixed)).toEqual([150.49, 150.51]);
+    expect(amounts(bank, fixed)).toEqual([99, 101]);
+    const [aboveFixed] = casesFor(bank, [
+      { ...fixed, amount: ["above-fixed"] } as never,
+    ]);
+    expect(aboveFixed).toMatchObject({
+      name: "F01-01__bank__single-fixed-above-fixed",
+      reference: { amount: 100 },
+    });
+  });
+
+  it("makes the codes of each length of its region, and of the length of the other one", () => {
+    const unknown = {
+      ...valid,
+      flow: "unknown-reference",
+      reference: undefined,
+      code: ["short", "exact", "long", "other-region"],
+    };
+    const lengths = (id: string) =>
+      casesFor(loadIntegration(id), [unknown as never]).map(
+        (entry) => entry.code?.length,
+      );
+    expect(lengths("supermarket")).toEqual([13, 14, 15, 10]);
+    expect(lengths("bank")).toEqual([9, 10, 11, 14]);
+    expect(
+      casesFor(supermarket, [unknown as never]).map((entry) => entry.name),
+    ).toContain("F01-01__supermarket__exact");
   });
 
   it("fails a date that is not a date", () => {
@@ -390,8 +472,8 @@ describe("the catalog", () => {
   });
 
   it("says which integrations exist when one does not", () => {
-    expect(() => loadIntegration("bank")).toThrow(
-      'There is no integration "bank". The ones there are: supermarket',
+    expect(() => loadIntegration("atm")).toThrow(
+      'There is no integration "atm". The ones there are: bank, supermarket',
     );
   });
 });

@@ -4,7 +4,6 @@
     "title": "A paid single reference takes no other payment",
     "flow": "payment-twice",
     "reference": { "type": "single", "amountType": "fixed" },
-    "amount": 150.5,
     "secondSequence": ["same", "new"],
     "objective": { "step": "second-payment", "expect": "R-102" },
     "tags": ["hu-02", "hu-09"]
@@ -14,7 +13,6 @@
     "title": "A repeated notice on a recurring reference is rejected",
     "flow": "payment-twice",
     "reference": { "type": "recurring", "amountType": "fixed" },
-    "amount": 150.5,
     "secondSequence": "same",
     "objective": { "step": "second-payment", "expect": "R-106" },
     "tags": ["hu-02", "hu-09"],
@@ -25,7 +23,6 @@
     "title": "A recurring reference takes a new payment",
     "flow": "payment-twice",
     "reference": { "type": "recurring", "amountType": "fixed" },
-    "amount": 150.5,
     "secondSequence": "new",
     "objective": { "step": "second-payment", "expect": "OK" },
     "checks": ["reference-state"],

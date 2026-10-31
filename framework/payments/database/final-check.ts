@@ -1,9 +1,9 @@
 import type { CheckOutcome, DatabaseCheck } from "../../engine/runner.ts";
-import type { ConfirmedPayment, PaymentContext } from "../context.ts";
+import type { ExpectedPayment, PaymentContext } from "../context.ts";
 import { movementsOf, unavailable, type Movement } from "./readings.ts";
 
 // The database has the last word (HU-01): the movements of the reference must match what the
-// API confirmed, no more and no less. It runs once at the end of every case, also after a
+// API answered, no more and no less. It runs once at the end of every case, also after a
 // failure, because the most expensive bug is an error that still left the payment.
 export const finalCheck: DatabaseCheck<PaymentContext> = {
   name: "final-check",
@@ -25,27 +25,38 @@ export const finalCheck: DatabaseCheck<PaymentContext> = {
       return unavailable("The movements of the reference", error);
     }
     return {
-      ...compareMovements(context.confirmed, read.movements),
+      ...compareMovements(context.payments, read.movements),
       readings: [read.reading],
     };
   },
 };
 
-// No more and no less: every payment the API confirmed is there, as it confirmed it, and no
-// movement is there that the API never confirmed.
+// No more and no less: every payment the API answered is there, in the state it left it, and no
+// movement is there that the API never confirmed. A payment its window confirmed keeps the time
+// the window ended.
 export function compareMovements(
-  confirmed: readonly ConfirmedPayment[],
+  payments: readonly ExpectedPayment[],
   movements: readonly Movement[],
 ): Omit<CheckOutcome, "readings"> {
   const differences: string[] = [];
-  for (const payment of confirmed) {
+  for (const payment of payments) {
     const movement = movements.find((row) => row.folio === payment.folio);
     if (movement === undefined) {
       differences.push(`${payment.folio} is not in the database`);
       continue;
     }
-    if (movement.status !== "confirmed") {
-      differences.push(`${payment.folio} is ${movement.status}, not confirmed`);
+    if (movement.status !== payment.status) {
+      differences.push(
+        `${payment.folio} is ${movement.status}, not ${payment.status}`,
+      );
+    }
+    if (
+      payment.confirmedAt !== undefined &&
+      movement.confirmedAt !== payment.confirmedAt
+    ) {
+      differences.push(
+        `${payment.folio} was confirmed at ${movement.confirmedAt ?? "no time"}, and its window ended at ${payment.confirmedAt}`,
+      );
     }
     // The exact amount: comparing with two decimals would hide an amount the database rounded.
     if (Number(movement.amount) !== payment.amount) {
@@ -68,7 +79,7 @@ export function compareMovements(
     }
   }
   for (const movement of movements) {
-    if (!confirmed.some((payment) => payment.folio === movement.folio)) {
+    if (!payments.some((payment) => payment.folio === movement.folio)) {
       differences.push(
         `${movement.folio ?? "a movement without a folio"} is ${movement.status}, and the API never confirmed it`,
       );
@@ -77,7 +88,9 @@ export function compareMovements(
 
   return {
     result: differences.length === 0 ? "match" : "mismatch",
-    expected: count(confirmed.map((payment) => `${payment.folio} confirmed`)),
+    expected: count(
+      payments.map((payment) => `${payment.folio} ${payment.status}`),
+    ),
     found: count(
       movements.map(
         (movement) => `${movement.folio ?? "no folio"} ${movement.status}`,

@@ -7,7 +7,6 @@
       "type": "single",
       "amountType": "fixed"
     },
-    "amount": 150.5,
     "objective": {
       "step": "create",
       "expect": 401,
@@ -19,8 +18,7 @@
     "id": "F11-02",
     "title": "A made-up token gets 401 before PayRef looks for the reference",
     "flow": "unknown-reference",
-    "code": "00000000000000",
-    "amount": 150.5,
+    "code": "exact",
     "objective": {
       "step": "request",
       "expect": 401,
@@ -37,7 +35,6 @@
       "type": "single",
       "amountType": "fixed"
     },
-    "amount": 150.5,
     "objective": {
       "step": "token",
       "expect": 401,
@@ -53,7 +50,6 @@
       "type": "single",
       "amountType": "fixed"
     },
-    "amount": 150.5,
     "objective": {
       "step": "request",
       "expect": 403,
@@ -69,7 +65,6 @@
       "type": "single",
       "amountType": "fixed"
     },
-    "amount": 150.5,
     "objective": {
       "step": "request",
       "expect": 400,
@@ -77,5 +72,20 @@
     },
     "tags": ["hu-02", "hu-09"],
     "notes": "PayRef 1.0 sends the stack trace with its errors: that is its bug 4."
+  },
+  {
+    "id": "F11-06",
+    "title": "A payment method without a reversal window cannot reverse a payment",
+    "flow": "transition",
+    "reference": {
+      "type": "single",
+      "amountType": "fixed"
+    },
+    "from": "paid",
+    "objective": {
+      "step": "reversal",
+      "expect": 403
+    },
+    "tags": ["hu-08", "hu-09"]
   }
 ]

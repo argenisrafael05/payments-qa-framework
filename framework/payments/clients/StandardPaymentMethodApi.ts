@@ -33,4 +33,33 @@ export class StandardPaymentMethodApi {
       body: payment,
     });
   }
+
+  // The request alone, and later its notice, by the folio the request gave.
+  request(token: string, payment: Payment): Promise<Exchange> {
+    return this.#http.call(coreApi.paymentRequest, {
+      method: "POST",
+      path: "/payment-requests",
+      token,
+      body: payment,
+    });
+  }
+
+  notice(token: string, folio: string): Promise<Exchange> {
+    return this.#http.call(coreApi.paymentNotice, {
+      method: "POST",
+      path: "/payment-notices",
+      token,
+      body: { folio },
+    });
+  }
+
+  // The reversal of a pending payment, while the window of its request runs.
+  reversal(token: string, folio: string): Promise<Exchange> {
+    return this.#http.call(coreApi.reversal, {
+      method: "POST",
+      path: "/reversals",
+      token,
+      body: { folio },
+    });
+  }
 }

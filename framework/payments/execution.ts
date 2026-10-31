@@ -20,11 +20,13 @@ import {
 } from "./context.ts";
 import { extraChecks } from "./database/checks.ts";
 import { finalCheck } from "./database/final-check.ts";
-import { flowOf } from "./flows/payment.ts";
+import { flowOf, isPaymentState } from "./flows/payment.ts";
 import type { Role } from "./environment.ts";
 import type { Integration } from "./integrations.ts";
+import { regions } from "./regions.ts";
 import type { RunSetup } from "./run-setup.ts";
 import { callerToken } from "./steps/access.ts";
+import { paymentOf } from "./steps/payments.ts";
 
 export type Execution = {
   done: Promise<CaseRecord>;
@@ -62,17 +64,27 @@ export function executeCase(options: {
     };
   }
 
+  const utcOffset = regions[run.integration.region].utcOffset;
+  const time = timeOf(entry, run.integration);
   const context = createContext({
     http: new Http({
       transport: options.transport,
       baseUrl: run.environment.payrefUrl,
       recorder,
-      testTime: entry.case.time,
+      testTime: time,
     }),
     db: options.db,
     environment: run.environment,
     reference: entry.reference,
-    creationTime: creationTimeOf(entry),
+    creationTime: creationTimeOf(entry, utcOffset),
+    time,
+    eventTime:
+      time === undefined || entry.case.after === undefined
+        ? undefined
+        : inRegion(
+            Date.parse(time) + afterOf(entry.case.after, run.integration),
+            utcOffset,
+          ),
     caller: callerOf(entry, run),
     code: entry.code,
     amount: entry.amount,
@@ -89,21 +101,118 @@ export function executeCase(options: {
   };
 }
 
-// Seeing the reference reports the state the transition started from (8.6).
+// Seeing the reference reports the state the transition left it in (8.6). The payment of a bank
+// leaves a single reference paid once it is confirmed, by its notice or by the end of its window,
+// and any other one active (8.7).
 function objectiveOf(entry: CaseEntry): Expectation {
   const objective = expectationOf(entry.case);
-  return entry.from !== undefined &&
-    entry.case.objective.step === "view" &&
-    objective.kind === "success"
-    ? { kind: "success", state: entry.from }
-    : objective;
+  if (
+    entry.from === undefined ||
+    entry.case.objective.step !== "view" ||
+    objective.kind !== "success"
+  ) {
+    return objective;
+  }
+  if (!isPaymentState(entry.from)) {
+    return { kind: "success", state: entry.from };
+  }
+  const confirmed =
+    entry.from === "confirmed" ||
+    (entry.from === "pending" && entry.case.after === "window-end");
+  return {
+    kind: "success",
+    state: confirmed && entry.reference?.type === "single" ? "paid" : "active",
+  };
+}
+
+// The case writes its time in the time of its region, and PayRef gets it with its zone. A case
+// whose event arrives after its request fixes the time it starts, so both times are exact.
+function timeOf(
+  entry: CaseEntry,
+  integration: Integration,
+): string | undefined {
+  const time = entry.case.time;
+  const { utcOffset } = regions[integration.region];
+  if (time !== undefined) {
+    return `${time}${utcOffset}`;
+  }
+  return entry.case.after === undefined
+    ? undefined
+    : inRegion(Date.now(), utcOffset);
+}
+
+// How long after the request the event arrives, in milliseconds, from the window of the
+// integration: a second before it ends, or when it ends.
+export function afterOf(
+  after: "before-window-end" | "window-end",
+  integration: Integration,
+): number {
+  const window = need(integration.reversalWindow, "The reversal window");
+  const end = window.minutes * 60_000;
+  return after === "window-end" ? end : end - 1000;
+}
+
+// A duration as a person reads it, like 1:59.
+function clockOf(ms: number): string {
+  const seconds = Math.round(ms / 1000);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+// A moment, written in the time of its region and with its zone, to the second.
+export function inRegion(ms: number, utcOffset: string): string {
+  const [, sign, hours, minutes] =
+    /^([+-])(\d{2}):(\d{2})$/.exec(utcOffset) ?? [];
+  const offset =
+    (sign === "-" ? -1 : 1) * (Number(hours) * 60 + Number(minutes));
+  const local = new Date(Math.floor(ms / 1000) * 1000 + offset * 60_000);
+  return `${local.toISOString().slice(0, 19)}${utcOffset}`;
+}
+
+// The event arrives where the case says in the window, after the request. If by then the window
+// ended, the payment was already confirmed on its own, at the end of the window, whatever the
+// event does.
+function arrivingAfter(
+  step: PaymentStep,
+  after: "before-window-end" | "window-end",
+  integration: Integration,
+): PaymentStep {
+  return {
+    ...step,
+    title: `${step.title}, ${clockOf(afterOf(after, integration))} after the request`,
+    run: (context) => {
+      const eventTime = need(context.eventTime, "The time of the event");
+      const window = integration.reversalWindow;
+      const folio = context.requested?.folio;
+      if (window !== undefined && folio !== undefined) {
+        const requestedAt = Date.parse(
+          need(context.time, "The time of the case"),
+        );
+        const windowEnd = requestedAt + window.minutes * 60_000;
+        const payment = paymentOf(context, folio);
+        if (
+          payment.status === "pending" &&
+          Date.parse(eventTime) >= windowEnd
+        ) {
+          payment.status = "confirmed";
+          payment.confirmedAt = new Date(windowEnd).toISOString();
+        }
+      }
+      return step.run({
+        ...context,
+        apis: apisOf(context.http.with({ testTime: eventTime })),
+      });
+    },
+  };
 }
 
 // Every step runs at the time of the case, but a reference that is already expired then was
 // created on its day, at 00:00, while it was still valid, because a past date is not created
 // (HU-07). The day of the case is the one written in its time, which is the time of its region.
 // A case that tests the creation itself keeps its time.
-export function creationTimeOf(entry: CaseEntry): string | undefined {
+export function creationTimeOf(
+  entry: CaseEntry,
+  utcOffset: string,
+): string | undefined {
   const time = entry.case.time;
   const expiresOn = entry.reference?.expiresOn;
   if (
@@ -113,9 +222,8 @@ export function creationTimeOf(entry: CaseEntry): string | undefined {
   ) {
     return undefined;
   }
-  const offset = /(Z|[+-]\d{2}:\d{2})$/.exec(time)?.[1];
-  return offset !== undefined && time.slice(0, 10) > expiresOn
-    ? `${expiresOn}T00:00:00${offset}`
+  return time.slice(0, 10) > expiresOn
+    ? `${expiresOn}T00:00:00${utcOffset}`
     : undefined;
 }
 
@@ -227,13 +335,22 @@ export function planFor(
       ? undefined
       : { from: entry.from, event: entry.case.objective.step },
   );
-  const objective = flow.findIndex((step) =>
-    step.covers.includes(entry.case.objective.step),
+  // A payment in two calls is complete at its notice: an objective that expects OK ends at the
+  // last step that covers it, and a rejection comes at the first one.
+  const covering = flow.flatMap((step, index) =>
+    step.covers.includes(entry.case.objective.step) ? [index] : [],
   );
-  const step = flow[objective];
-  if (step === undefined) {
+  const objective =
+    (expectationOf(entry.case).kind === "success"
+      ? covering.at(-1)
+      : covering[0]) ?? -1;
+  const found = flow[objective];
+  if (found === undefined) {
     throw new Error(`${entry.name}: its flow has no step for its objective`);
   }
+  const { after } = entry.case;
+  const step =
+    after === undefined ? found : arrivingAfter(found, after, integration);
   return {
     steps: [
       ...flow.slice(0, objective),

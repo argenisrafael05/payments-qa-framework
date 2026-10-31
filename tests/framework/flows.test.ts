@@ -6,6 +6,7 @@ import { loadIntegration } from "../../framework/payments/integrations.ts";
 import {
   inquiry,
   inquiryOfUnknown,
+  reversal,
 } from "../../framework/payments/steps/payments.ts";
 
 // The flows and what each step expects, without PayRef.
@@ -73,6 +74,170 @@ describe("the flows", () => {
       "create-reference",
       "view",
     ]);
+  });
+
+  it("lets the bank send the request and then its notice, without an inquiry", () => {
+    const bank = loadIntegration("bank");
+    expect(flowOf("payment", bank).map((step) => step.name)).toEqual([
+      "merchant-token",
+      "create-reference",
+      "payment-method-token",
+      "request",
+      "notice",
+    ]);
+    expect(
+      flowOf("transition", bank, { from: "paid", event: "view" }).map(
+        (step) => step.name,
+      ),
+    ).toEqual([
+      "merchant-token",
+      "create-reference",
+      "payment-method-token",
+      "request-first",
+      "notice-first",
+      "view",
+    ]);
+  });
+
+  it("pays twice in two calls each time on the bank, and ends where the payment is", () => {
+    const bank = loadIntegration("bank");
+    expect(
+      flowOf("payment-twice", bank)
+        .map((step) => step.name)
+        .slice(-4),
+    ).toEqual(["request", "notice", "second-request", "second-notice"]);
+    const twice = (expect: string) => {
+      const [entry] = casesFor(bank, [
+        {
+          id: "F99-02",
+          title: "Twice",
+          flow: "payment-twice",
+          reference: { type: "recurring", amountType: "fixed" },
+          secondSequence: "new",
+          objective: { step: "second-payment", expect },
+          tags: [],
+        } as never,
+      ]);
+      if (entry === undefined) {
+        throw new Error("The case has no test");
+      }
+      return planFor(entry, bank).steps.at(-1)?.name;
+    };
+    expect(twice("OK")).toBe("second-notice");
+    expect(twice("R-106")).toBe("second-request");
+  });
+
+  it("takes the payment of the bank to its state in the window, then fires its event", () => {
+    const bank = loadIntegration("bank");
+    const names = (from: "pending" | "reversed", event: string) =>
+      flowOf("transition", bank, { from, event })
+        .map((step) => step.name)
+        .slice(3);
+    expect(names("pending", "reversal")).toEqual(["request-first", "reversal"]);
+    expect(names("pending", "request")).toEqual([
+      "request-first",
+      "another-request",
+    ]);
+    expect(names("reversed", "notice")).toEqual([
+      "request-first",
+      "reversal-first",
+      "notice",
+    ]);
+  });
+
+  it("sends the event after the request, with the payment its window already confirmed", async () => {
+    const bank = loadIntegration("bank");
+    const [entry] = casesFor(bank, [
+      {
+        id: "F99-07",
+        title: "Window",
+        flow: "transition",
+        reference: { type: "single", amountType: "fixed" },
+        from: "pending",
+        after: "window-end",
+        objective: { step: "reversal", expect: "R-107" },
+        tags: [],
+      } as never,
+    ]);
+    if (entry === undefined) {
+      throw new Error("The case has no test");
+    }
+    const event = planFor(entry, bank).steps.at(-1);
+    expect(event?.title).toBe(
+      "The payment method reverses the payment, 2:00 after the request",
+    );
+    const sent: unknown[] = [];
+    const http = {
+      with: (change: unknown) => {
+        sent.push(change);
+        return { call: async () => ({}) };
+      },
+    };
+    const payment = {
+      folio: "SA-0000000001",
+      authorization: "CTSEZE",
+      amount: 100,
+      sequence: "bank-1",
+      paymentMethodId: "bank",
+      status: "pending",
+    };
+    await event?.run({
+      http,
+      time: "2026-11-15T12:00:00-03:00",
+      eventTime: "2026-11-15T12:02:00-03:00",
+      requested: { folio: payment.folio },
+      payments: [payment],
+      tokens: { paymentMethod: "token" },
+    } as never);
+    expect(sent).toEqual([{ testTime: "2026-11-15T12:02:00-03:00" }]);
+    expect(payment).toMatchObject({
+      status: "confirmed",
+      confirmedAt: "2026-11-15T15:02:00.000Z",
+    });
+  });
+
+  it("pays first, then reverses, when the supermarket asks for the reversal it does not have", () => {
+    const [entry] = casesFor(supermarket, [
+      {
+        id: "F99-08",
+        title: "No reversal",
+        flow: "transition",
+        reference: { type: "single", amountType: "fixed" },
+        from: "paid",
+        objective: { step: "reversal", expect: 403 },
+        tags: [],
+      } as never,
+    ]);
+    if (entry === undefined) {
+      throw new Error("The case has no test");
+    }
+    expect(entry.notApplicable).toBeUndefined();
+    expect(planFor(entry, supermarket).steps.map((step) => step.name)).toEqual([
+      "merchant-token",
+      "create-reference",
+      "payment-method-token",
+      "pay-first",
+      "reversal",
+    ]);
+  });
+
+  it("keeps confirmed a payment its window already confirmed, whatever the reversal answers", () => {
+    const payment = {
+      folio: "SA-0000000001",
+      status: "confirmed",
+      confirmedAt: "2026-11-15T15:02:00.000Z",
+    };
+    reversal.keep?.({ payments: [payment] } as never, {
+      code: "OK",
+      folio: payment.folio,
+    });
+    expect(payment.status).toBe("confirmed");
+    const pending = { folio: "SA-0000000002", status: "pending" };
+    reversal.keep?.({ payments: [pending] } as never, {
+      code: "OK",
+      folio: pending.folio,
+    });
+    expect(pending.status).toBe("reversed");
   });
 
   it("pays a second time in the flow that pays twice", () => {

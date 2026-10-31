@@ -60,11 +60,12 @@ export type Call = {
   testTime?: string;
 };
 
-// What a case can change in the call of its objective (8.9): another token or none at all, or
-// the body cut before its end, like a request that broke on the way.
+// What a case can change in the call of its objective (8.9): another token or none at all, the
+// body cut before its end, like a request that broke on the way, or the time it arrives.
 export type CallChange = {
   token?: string | null;
   breakBody?: boolean;
+  testTime?: string;
 };
 
 // The gateway sends these when the system did not answer (8.5).
@@ -109,7 +110,7 @@ export class Http {
       retryDelayMs: this.#retryDelayMs,
       testTime: this.#testTime,
     });
-    http.#change = change;
+    http.#change = { ...this.#change, ...change };
     return http;
   }
 
@@ -124,7 +125,7 @@ export class Http {
     if (typeof token === "string") {
       request.headers.authorization = `Bearer ${token}`;
     }
-    const testTime = call.testTime ?? this.#testTime;
+    const testTime = call.testTime ?? this.#change.testTime ?? this.#testTime;
     if (testTime !== undefined) {
       request.headers["x-test-time"] = testTime;
     }

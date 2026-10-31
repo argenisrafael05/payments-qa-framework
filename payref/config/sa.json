@@ -1,0 +1,29 @@
+{
+  "region": "sa",
+  "referenceLength": 10,
+  "utcOffset": "-03:00",
+  "decimals": 0,
+  "merchants": [
+    {
+      "id": "merchant-sa-1",
+      "name": "Merchant One",
+      "keyEnv": "SA_MERCHANT_1_KEY"
+    },
+    {
+      "id": "merchant-sa-2",
+      "name": "Merchant Two",
+      "keyEnv": "SA_MERCHANT_2_KEY"
+    }
+  ],
+  "paymentMethods": [
+    {
+      "id": "bank",
+      "name": "Bank",
+      "kind": "standard",
+      "keyEnv": "SA_BANK_KEY",
+      "operations": ["request", "notice", "reversal"],
+      "amountLimits": { "min": 10, "max": 50000 },
+      "reversalWindow": { "minutes": 2 }
+    }
+  ]
+}

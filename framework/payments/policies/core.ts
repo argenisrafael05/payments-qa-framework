@@ -40,4 +40,13 @@ export const coreApi = {
     requires: ["folio", "authorization"],
     repeatable: false,
   }),
+  paymentRequest: operation({
+    requires: ["folio", "authorization"],
+    repeatable: false,
+  }),
+  paymentNotice: operation({
+    requires: ["folio", "authorization"],
+    repeatable: false,
+  }),
+  reversal: operation({ requires: ["folio"], repeatable: false }),
 };

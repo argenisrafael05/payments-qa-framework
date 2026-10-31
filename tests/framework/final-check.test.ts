@@ -1,7 +1,7 @@
 import type { Pool } from "mysql2/promise";
 import { describe, expect, it } from "vitest";
 import type {
-  ConfirmedPayment,
+  ExpectedPayment,
   PaymentContext,
 } from "../../framework/payments/context.ts";
 import {
@@ -12,12 +12,13 @@ import type { Movement } from "../../framework/payments/database/readings.ts";
 
 // The final check of the database, with controlled rows (HU-01).
 
-const confirmed: ConfirmedPayment = {
+const confirmed: ExpectedPayment = {
   folio: "MX-0000000001",
   authorization: "CTSEZE",
   amount: 150.5,
   sequence: "supermarket-1",
   paymentMethodId: "supermarket",
+  status: "confirmed",
 };
 
 const stored: Movement = {
@@ -72,6 +73,34 @@ describe("the final check of the database", () => {
     });
   });
 
+  it("finds a payment its window confirmed at another time than the end of the window", () => {
+    const byTheWindow = {
+      ...confirmed,
+      confirmedAt: "2026-10-27T06:26:59.000Z",
+    };
+    expect(compareMovements([byTheWindow], [stored])).toMatchObject({
+      result: "mismatch",
+      detail:
+        "MX-0000000001 was confirmed at 2026-10-27T06:24:59.402Z, and its window ended at 2026-10-27T06:26:59.000Z",
+    });
+  });
+
+  it("expects a payment in the state the API left it, pending or reversed", () => {
+    const pending = { ...stored, status: "pending", confirmedAt: null };
+    expect(
+      compareMovements([{ ...confirmed, status: "pending" }], [pending]),
+    ).toMatchObject({
+      result: "match",
+      expected: "1 movement: MX-0000000001 pending",
+    });
+    expect(
+      compareMovements([{ ...confirmed, status: "reversed" }], [pending]),
+    ).toMatchObject({
+      result: "mismatch",
+      detail: "MX-0000000001 is pending, not reversed",
+    });
+  });
+
   it("finds an amount the database rounded, which two decimals would hide", () => {
     // 150.504 shown with two decimals is 150.50, the same as what the database kept.
     const rounded = { ...stored, amount: "150.50" };
@@ -92,7 +121,7 @@ describe("the final check of the database", () => {
     const context = {
       db: down,
       created: { code: "12345678901234", amount: 150.5 },
-      confirmed: [],
+      payments: [],
     } as unknown as PaymentContext;
     expect(await finalCheck.run(context)).toEqual({
       result: "unavailable",
@@ -107,7 +136,7 @@ describe("the final check of the database", () => {
   });
 
   it("has nothing to read when the case never created a reference", async () => {
-    const context = { confirmed: [] } as unknown as PaymentContext;
+    const context = { payments: [] } as unknown as PaymentContext;
     expect(await finalCheck.run(context)).toMatchObject({ result: "skipped" });
   });
 });

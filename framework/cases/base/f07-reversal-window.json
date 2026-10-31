@@ -1,0 +1,148 @@
+[
+  {
+    "id": "F07-01",
+    "title": "The notice confirms the payment one second before the window closes",
+    "flow": "transition",
+    "reference": {
+      "type": ["single", "recurring"],
+      "amountType": "fixed"
+    },
+    "from": "pending",
+    "after": "before-window-end",
+    "objective": { "step": "notice", "expect": "OK" },
+    "checks": ["reference-state"],
+    "tags": ["hu-10"]
+  },
+  {
+    "id": "F07-02",
+    "title": "The reversal one second before the window closes leaves the reference payable again",
+    "flow": "transition",
+    "reference": {
+      "type": ["single", "recurring"],
+      "amountType": "fixed"
+    },
+    "from": "pending",
+    "after": "before-window-end",
+    "objective": { "step": "reversal", "expect": "OK" },
+    "checks": ["reference-state"],
+    "tags": ["hu-10"]
+  },
+  {
+    "id": "F07-03",
+    "title": "The reversal at the end of the window gets R-107, and the payment is confirmed",
+    "flow": "transition",
+    "reference": {
+      "type": ["single", "recurring"],
+      "amountType": "fixed"
+    },
+    "from": "pending",
+    "after": "window-end",
+    "objective": { "step": "reversal", "expect": "R-107" },
+    "tags": ["hu-10"],
+    "notes": "PayRef 1.0 still takes the reversal at the end of the window exactly: that is its bug 8."
+  },
+  {
+    "id": "F07-04",
+    "title": "Without a notice or a reversal, the payment is confirmed on its own when the window ends",
+    "flow": "transition",
+    "reference": {
+      "type": ["single", "recurring"],
+      "amountType": "fixed"
+    },
+    "from": "pending",
+    "after": "window-end",
+    "objective": { "step": "view", "expect": "OK" },
+    "checks": ["reference-state"],
+    "tags": ["hu-10"]
+  },
+  {
+    "id": "F07-05",
+    "title": "Another request while the window runs gets R-108",
+    "flow": "transition",
+    "reference": {
+      "type": ["single", "recurring"],
+      "amountType": "fixed"
+    },
+    "from": "pending",
+    "after": "before-window-end",
+    "objective": { "step": "request", "expect": "R-108" },
+    "tags": ["hu-10"]
+  },
+  {
+    "id": "F07-06",
+    "title": "The merchant cannot cancel the reference while the window runs",
+    "flow": "transition",
+    "reference": {
+      "type": ["single", "recurring"],
+      "amountType": "fixed"
+    },
+    "from": "pending",
+    "objective": { "step": "cancel", "expect": "R-108" },
+    "checks": ["reference-state"],
+    "tags": ["hu-10", "hu-07"]
+  },
+  {
+    "id": "F07-07",
+    "title": "The payment is confirmed even if the reference expires while the window runs",
+    "flow": "transition",
+    "reference": {
+      "type": ["single", "recurring"],
+      "amountType": "fixed",
+      "expiresOn": "2026-11-15"
+    },
+    "time": "2026-11-15T23:59:59",
+    "from": "pending",
+    "after": "before-window-end",
+    "objective": { "step": "notice", "expect": "OK" },
+    "tags": ["hu-10"],
+    "notes": "The request goes at 23:59:59 of the last day, and the notice a second before the window ends, with the reference already expired."
+  },
+  {
+    "id": "F07-08",
+    "title": "Another notice of a confirmed payment of a single reference gets R-102",
+    "flow": "transition",
+    "reference": {
+      "type": "single",
+      "amountType": "fixed"
+    },
+    "from": "confirmed",
+    "objective": { "step": "notice", "expect": "R-102" },
+    "tags": ["hu-10"]
+  },
+  {
+    "id": "F07-09",
+    "title": "Another notice of a confirmed payment of a recurring reference is a repeated notice",
+    "flow": "transition",
+    "reference": {
+      "type": "recurring",
+      "amountType": "fixed"
+    },
+    "from": "confirmed",
+    "objective": { "step": "notice", "expect": "R-106" },
+    "tags": ["hu-10"]
+  },
+  {
+    "id": "F07-10",
+    "title": "A reversal after the window closed gets R-107",
+    "flow": "transition",
+    "reference": {
+      "type": ["single", "recurring"],
+      "amountType": "fixed"
+    },
+    "from": ["confirmed", "reversed"],
+    "objective": { "step": "reversal", "expect": "R-107" },
+    "tags": ["hu-10"]
+  },
+  {
+    "id": "F07-11",
+    "title": "The notice of a reversed payment gets R-107",
+    "flow": "transition",
+    "reference": {
+      "type": ["single", "recurring"],
+      "amountType": "fixed"
+    },
+    "from": "reversed",
+    "objective": { "step": "notice", "expect": "R-107" },
+    "tags": ["hu-10"]
+  }
+]

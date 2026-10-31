@@ -60,6 +60,6 @@ describe("the quick check", () => {
 
   it("checks the catalog and the config of the integration", () => {
     expect(() => checkConfig("supermarket")).not.toThrow();
-    expect(() => checkConfig("bank")).toThrow('There is no integration "bank"');
+    expect(() => checkConfig("atm")).toThrow('There is no integration "atm"');
   });
 });

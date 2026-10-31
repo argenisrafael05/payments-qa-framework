@@ -4,14 +4,23 @@ import { merchantToken, paymentMethodToken } from "../steps/access.ts";
 import {
   cancelFirst,
   cancelReference,
+  noticeFirst,
   payFirst,
+  requestFirst,
+  reversalFirst,
   viewReference,
 } from "../steps/merchant.ts";
 import {
+  anotherRequest,
   inquiry,
   inquiryOfUnknown,
+  paymentNotice,
+  paymentRequest,
   payTogether,
+  reversal,
+  secondNotice,
   secondPayment,
+  secondRequest,
 } from "../steps/payments.ts";
 import { createReference } from "../steps/references.ts";
 
@@ -24,22 +33,59 @@ export function paymentFlow(integration: Integration): readonly PaymentStep[] {
 export type FlowName =
   "payment" | "payment-twice" | "unknown-reference" | "transition";
 
-export type State = "active" | "paid" | "cancelled" | "expired";
+// The states of the reference (8.6), and the ones of the payment of a bank, after its request
+// (8.7).
+export const referenceStates = [
+  "active",
+  "paid",
+  "cancelled",
+  "expired",
+] as const;
+export const paymentStates = ["pending", "confirmed", "reversed"] as const;
 
-// A transition of 8.6: the state the reference starts from, and the event it gets.
+export type State =
+  (typeof referenceStates)[number] | (typeof paymentStates)[number];
+
+export function isPaymentState(
+  state: State,
+): state is (typeof paymentStates)[number] {
+  return (paymentStates as readonly string[]).includes(state);
+}
+
+// A transition of 8.6 or 8.7: the state it starts from, and the event it gets.
 export type Transition = { from: State; event: string };
 
-// What takes a reference to each state. An expired one only needs its date and its time.
-const toState: Record<State, readonly PaymentStep[]> = {
-  active: [],
-  expired: [],
-  paid: [paymentMethodToken, payFirst],
-  cancelled: [cancelFirst],
-};
+// What takes a reference to each state. An expired one only needs its date and its time, and a
+// paid one goes through the payment of its integration first. The payment of a bank starts
+// with its request, and then its notice or its reversal.
+function toState(
+  state: State,
+  integration: Integration,
+): readonly PaymentStep[] {
+  switch (state) {
+    case "active":
+    case "expired":
+      return [];
+    case "paid":
+      return integration.notice === "together"
+        ? [paymentMethodToken, payFirst]
+        : [paymentMethodToken, requestFirst, noticeFirst];
+    case "cancelled":
+      return [cancelFirst];
+    case "pending":
+      return [paymentMethodToken, requestFirst];
+    case "confirmed":
+      return [paymentMethodToken, requestFirst, noticeFirst];
+    case "reversed":
+      return [paymentMethodToken, requestFirst, reversalFirst];
+  }
+}
 
 const events: Record<string, readonly PaymentStep[]> = {
   view: [viewReference],
   cancel: [cancelReference],
+  notice: [paymentNotice],
+  reversal: [reversal],
 };
 
 // The payment twice pays, and then pays the same reference again, with the same sequence or a
@@ -68,7 +114,9 @@ export function flowOf(
         paymentMethodToken,
         ...asks,
         ...pays,
-        secondPayment,
+        ...(integration.notice === "together"
+          ? [secondPayment]
+          : [secondRequest, secondNotice]),
       ];
     case "unknown-reference":
       return [
@@ -77,15 +125,20 @@ export function flowOf(
         ...pays,
       ];
     case "transition": {
-      // Paying is the payment of every integration, with its inquiry when it inquires.
+      const from = transition?.from ?? "active";
+      // Paying is the payment of every integration, with its inquiry when it inquires. A
+      // payment already requested gets another request, from another customer.
+      const paying = isPaymentState(from)
+        ? [anotherRequest]
+        : [paymentMethodToken, ...asks, ...pays];
       const event =
         transition?.event === "request"
-          ? [paymentMethodToken, ...asks, ...pays]
+          ? paying
           : (events[transition?.event ?? ""] ?? []);
       return [
         merchantToken,
         createReference,
-        ...toState[transition?.from ?? "active"],
+        ...toState(from, integration),
         ...event,
       ];
     }
@@ -96,5 +149,7 @@ function paymentOf(integration: Integration): readonly PaymentStep[] {
   switch (integration.notice) {
     case "together":
       return [payTogether];
+    case "separate":
+      return [paymentRequest, paymentNotice];
   }
 }

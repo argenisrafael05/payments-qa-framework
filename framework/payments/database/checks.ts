@@ -12,7 +12,8 @@ export const extraChecks: Record<
   DatabaseCheck<PaymentContext>
 > = {
   // The state the reference is left in, from what the API confirmed (8.6): cancelled if the
-  // merchant cancelled it, paid if it is a single one that was paid, and active if not.
+  // merchant cancelled it, paid if it is a single one with a confirmed payment, and active if
+  // not, also after a reversal (8.7).
   "reference-state": {
     name: "reference-state",
     title: "The reference is in the state its payment leaves it in",
@@ -21,7 +22,8 @@ export const extraChecks: Record<
       const type = need(context.reference, "The reference").type;
       const expected = context.cancelled
         ? "cancelled"
-        : type === "single" && context.confirmed.length > 0
+        : type === "single" &&
+            context.payments.some((payment) => payment.status === "confirmed")
           ? "paid"
           : "active";
       try {

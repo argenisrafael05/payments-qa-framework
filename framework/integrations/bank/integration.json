@@ -1,0 +1,24 @@
+{
+  "id": "bank",
+  "name": "Bank",
+  "region": "sa",
+  "contract": "standard",
+  "notice": "separate",
+  "inquiry": false,
+  "paymentMethod": {
+    "id": "bank",
+    "keyEnv": "SA_BANK_KEY"
+  },
+  "amountLimits": { "min": 10, "max": 50000 },
+  "reversalWindow": { "minutes": 2 },
+  "merchant": {
+    "id": "merchant-sa-1",
+    "keyEnv": "SA_MERCHANT_1_KEY"
+  },
+  "otherMerchants": {
+    "another-merchant": {
+      "id": "merchant-sa-2",
+      "keyEnv": "SA_MERCHANT_2_KEY"
+    }
+  }
+}

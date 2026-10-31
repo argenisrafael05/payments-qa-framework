@@ -3,7 +3,8 @@ import { readFileSync } from "node:fs";
 export type Region = "mx" | "sa";
 export type Version = "1.0" | "1.1";
 export type Mode = "normal" | "test";
-export type Operation = "inquiry" | "payment";
+export type Operation =
+  "inquiry" | "payment" | "request" | "notice" | "reversal";
 
 export type Config = {
   region: Region;
@@ -34,6 +35,9 @@ export type PaymentMethodConfig = {
   keyEnv: string;
   operations: Operation[];
   amountLimits: { min: number; max: number };
+  // The reversal window of a bank: its request leaves the payment pending, and the notice
+  // confirms it, or the reversal undoes it, until the window ends (HU-10).
+  reversalWindow?: { minutes: number };
 };
 
 export type RegionConfig = {

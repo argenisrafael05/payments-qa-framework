@@ -2,6 +2,7 @@ import type { JsonObject } from "../../engine/http.ts";
 import {
   need,
   text,
+  type ExpectedPayment,
   type PaymentContext,
   type PaymentStep,
 } from "../context.ts";
@@ -49,7 +50,126 @@ export const payTogether: PaymentStep = {
     );
   },
   keep: (context, body) =>
-    confirm(context, body, context.sequence, context.amount),
+    keepPayment(context, body, context.sequence, "confirmed"),
+};
+
+// The request alone, like a bank that validates before it charges. The payment stays pending
+// until its notice.
+export const paymentRequest: PaymentStep = {
+  name: "request",
+  title: "The payment method sends the request",
+  kind: "executes",
+  covers: ["request"],
+  run: (context) =>
+    context.apis.paymentMethod.request(
+      need(context.tokens.paymentMethod, "The payment method's token"),
+      {
+        reference: need(context.created, "The reference").code,
+        amount: context.amount,
+        sequence: context.sequence,
+      },
+    ),
+  keep: (context, body) => {
+    context.requested = { folio: text(body.folio, "The folio") };
+    keepPayment(context, body, context.sequence, "pending");
+  },
+};
+
+// The notice of that request, by its folio. It confirms the payment.
+export const paymentNotice: PaymentStep = {
+  name: "notice",
+  title: "The payment method sends the notice",
+  kind: "executes",
+  covers: ["notice"],
+  run: (context) =>
+    context.apis.paymentMethod.notice(
+      need(context.tokens.paymentMethod, "The payment method's token"),
+      need(context.requested, "The request").folio,
+    ),
+  keep: (context, body) => {
+    paymentOf(context, text(body.folio, "The folio")).status = "confirmed";
+  },
+};
+
+// Another request of the same reference while the window of the first one runs, like a second
+// customer: it brings a sequence of its own.
+export const anotherRequest: PaymentStep = {
+  name: "another-request",
+  title: "The payment method sends another request of the same reference",
+  kind: "executes",
+  covers: ["request"],
+  run: (context) =>
+    context.apis.paymentMethod.request(
+      need(context.tokens.paymentMethod, "The payment method's token"),
+      {
+        reference: need(context.created, "The reference").code,
+        amount: context.amount,
+        sequence: `${context.sequence}-2`,
+      },
+    ),
+  keep: (context, body) =>
+    keepPayment(context, body, `${context.sequence}-2`, "pending"),
+};
+
+// The reversal of the payment, by its folio. A payment the window already confirmed stays
+// confirmed, whatever the API answers.
+export const reversal: PaymentStep = {
+  name: "reversal",
+  title: "The payment method reverses the payment",
+  kind: "executes",
+  covers: ["reversal"],
+  run: (context) =>
+    context.apis.paymentMethod.reversal(
+      need(context.tokens.paymentMethod, "The payment method's token"),
+      need(context.payments.at(-1), "The payment").folio,
+    ),
+  keep: (context, body) => {
+    const payment = paymentOf(context, text(body.folio, "The folio"));
+    if (payment.status === "pending") {
+      payment.status = "reversed";
+    }
+  },
+};
+
+// The same reference again in two calls, like the bank: its request, and then its notice.
+export const secondRequest: PaymentStep = {
+  name: "second-request",
+  title: "The payment method sends the request of the same reference again",
+  kind: "executes",
+  covers: ["second-payment"],
+  run: (context) =>
+    context.apis.paymentMethod.request(
+      need(context.tokens.paymentMethod, "The payment method's token"),
+      {
+        reference: need(context.created, "The reference").code,
+        amount: context.amount,
+        sequence: need(context.secondSequence, "The second sequence"),
+      },
+    ),
+  keep: (context, body) => {
+    context.secondRequested = { folio: text(body.folio, "The folio") };
+    keepPayment(
+      context,
+      body,
+      need(context.secondSequence, "The second sequence"),
+      "pending",
+    );
+  },
+};
+
+export const secondNotice: PaymentStep = {
+  name: "second-notice",
+  title: "The payment method sends the notice of the second request",
+  kind: "executes",
+  covers: ["second-payment"],
+  run: (context) =>
+    context.apis.paymentMethod.notice(
+      need(context.tokens.paymentMethod, "The payment method's token"),
+      need(context.secondRequested, "The second request").folio,
+    ),
+  keep: (context, body) => {
+    paymentOf(context, text(body.folio, "The folio")).status = "confirmed";
+  },
 };
 
 // The same reference, paid again: with the sequence of the first payment, like a repeated
@@ -69,26 +189,38 @@ export const secondPayment: PaymentStep = {
       },
     ),
   keep: (context, body) =>
-    confirm(
+    keepPayment(
       context,
       body,
       need(context.secondSequence, "The second sequence"),
-      context.amount,
+      "confirmed",
     ),
 };
 
-// A payment the API confirmed, which the database has to have at the end.
-function confirm(
+// A payment the API answered OK, which the database has to have at the end.
+function keepPayment(
   context: PaymentContext,
   body: JsonObject,
   sequence: string,
-  amount: number,
+  status: ExpectedPayment["status"],
 ): void {
-  context.confirmed.push({
+  context.payments.push({
     folio: text(body.folio, "The folio"),
     authorization: text(body.authorization, "The authorization"),
-    amount,
+    amount: context.amount,
     sequence,
     paymentMethodId: context.paymentMethod.id,
+    status,
   });
+}
+
+// The payment of a folio its request already kept.
+export function paymentOf(
+  context: PaymentContext,
+  folio: string,
+): ExpectedPayment {
+  return need(
+    context.payments.find((payment) => payment.folio === folio),
+    `The payment ${folio}`,
+  );
 }
