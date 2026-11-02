@@ -143,24 +143,41 @@ describe("the catalog crossed with each integration", () => {
     expect(entry?.notApplicable).toBeUndefined();
   });
 
-  it("applies the whole real catalog, but the window where there is none and its 403 where there is", () => {
+  it("applies the whole real catalog, but the window where there is none, the resource where there is none and the 403 where there is", () => {
     const notApplicable = (id: string) =>
-      casesFor(loadIntegration(id), loadCatalog()).filter(
-        (entry) => entry.notApplicable !== undefined,
+      new Map(
+        casesFor(loadIntegration(id), loadCatalog())
+          .filter((entry) => entry.notApplicable !== undefined)
+          .map((entry) => [entry.case.id, entry.notApplicable]),
       );
-    expect(
-      notApplicable("bank").map((entry) => [entry.name, entry.notApplicable]),
-    ).toEqual([
-      [
-        "F11-06__bank__single-fixed-from-paid",
-        "Bank has the reversal, so the case does not apply",
-      ],
-    ]);
+    const noWebhook = "Bank has no webhook, so the case does not apply";
+    expect(notApplicable("bank")).toEqual(
+      new Map([
+        ["F08-01", noWebhook],
+        ["F08-02", noWebhook],
+        ["F08-03", noWebhook],
+        ["F08-04", noWebhook],
+        ["F08-05", noWebhook],
+        ["F08-06", noWebhook],
+        ["F09-01", "Bank has no payment resource, so the case does not apply"],
+        ["F10-14", "Bank has no payment resource, so the case does not apply"],
+        ["F11-06", "Bank has the reversal, so the case does not apply"],
+      ]),
+    );
     const supermarket = notApplicable("supermarket");
     expect(
-      new Set(supermarket.map((entry) => entry.case.id.slice(0, 3))),
-    ).toEqual(new Set(["F07"]));
-    expect(supermarket[0]?.notApplicable).toBe(
+      [...supermarket.keys()].filter((id) => !id.startsWith("F07")),
+    ).toEqual([
+      "F08-01",
+      "F08-02",
+      "F08-03",
+      "F08-04",
+      "F08-05",
+      "F08-06",
+      "F09-01",
+      "F10-14",
+    ]);
+    expect(supermarket.get("F07-01")).toBe(
       "Supermarket has no reversal window, so the case does not apply",
     );
   });

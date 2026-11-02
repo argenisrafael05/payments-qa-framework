@@ -44,6 +44,60 @@ export async function movementsOf(
   };
 }
 
+// The payment resources the bridge gave for a reference, one row each time the merchant asked.
+export async function resourcesOf(
+  db: Pool,
+  reference: string,
+): Promise<{ resources: Record<string, unknown>[]; reading: ReadingRecord }> {
+  const [rows] = await db.query<RowDataPacket[]>(
+    `SELECT id, resource_id, amount, qr, link, created_at
+     FROM bridge_operations WHERE operation = 'resource' AND result = 'OK' AND reference_code = ? ORDER BY id`,
+    [reference],
+  );
+  const resources = rows.map((row) => ({
+    id: row.id,
+    resourceId: row.resource_id,
+    amount: row.amount,
+    qr: row.qr,
+    link: row.link,
+    createdAt: instant(row.created_at),
+  }));
+  return {
+    resources,
+    reading: {
+      name: "The payment resources of the reference in the log of the bridge",
+      rows: resources,
+    },
+  };
+}
+
+// The webhooks of a payment resource that PayRef kept in the log of the bridge, in order.
+export async function webhooksOf(
+  db: Pool,
+  resourceId: string,
+): Promise<{ webhooks: Record<string, unknown>[]; reading: ReadingRecord }> {
+  const [rows] = await db.query<RowDataPacket[]>(
+    `SELECT id, resource_id, amount, result, folio, created_at
+     FROM bridge_operations WHERE operation = 'webhook' AND resource_id = ? ORDER BY id`,
+    [resourceId],
+  );
+  const webhooks = rows.map((row) => ({
+    id: row.id,
+    resourceId: row.resource_id,
+    amount: row.amount,
+    result: row.result,
+    folio: row.folio,
+    createdAt: instant(row.created_at),
+  }));
+  return {
+    webhooks,
+    reading: {
+      name: "The webhooks of the resource in the log of the bridge",
+      rows: webhooks,
+    },
+  };
+}
+
 export type StoredReference = {
   code: string;
   merchantId: string;

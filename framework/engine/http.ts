@@ -56,6 +56,8 @@ export type Call = {
   path: string;
   token?: string;
   body?: JsonObject;
+  // What the API asks for besides the token, like the signature of a webhook.
+  headers?: Record<string, string>;
   // The time of this call, when it is not the one of the case.
   testTime?: string;
 };
@@ -118,7 +120,7 @@ export class Http {
     const request: HttpRequest = {
       method: call.method,
       url: `${this.#baseUrl}${call.path}`,
-      headers: {},
+      headers: { ...call.headers },
     };
     const token =
       this.#change.token === undefined ? call.token : this.#change.token;

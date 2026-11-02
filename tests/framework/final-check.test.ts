@@ -101,6 +101,14 @@ describe("the final check of the database", () => {
     });
   });
 
+  it("does not compare the authorization it never saw, when the wallet sent its own webhook", () => {
+    const { authorization, ...observed } = confirmed;
+    expect(authorization).toBe("CTSEZE");
+    expect(
+      compareMovements([observed], [{ ...stored, authorization: "OTHER1" }]),
+    ).toMatchObject({ result: "match" });
+  });
+
   it("finds an amount the database rounded, which two decimals would hide", () => {
     // 150.504 shown with two decimals is 150.50, the same as what the database kept.
     const rounded = { ...stored, amount: "150.50" };

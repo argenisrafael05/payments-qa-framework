@@ -198,7 +198,7 @@ export const secondPayment: PaymentStep = {
 };
 
 // A payment the API answered OK, which the database has to have at the end.
-function keepPayment(
+export function keepPayment(
   context: PaymentContext,
   body: JsonObject,
   sequence: string,

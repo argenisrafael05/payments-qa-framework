@@ -70,6 +70,9 @@ export function compareMovements(
       sequence: payment.sequence,
     };
     for (const [field, value] of Object.entries(expected)) {
+      if (value === undefined) {
+        continue;
+      }
       const stored = movement[field as keyof Movement];
       if (stored !== value) {
         differences.push(

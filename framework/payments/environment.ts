@@ -18,6 +18,8 @@ export function loadEnvFiles(): void {
 export type Environment = {
   name: string;
   payrefUrl: string;
+  // The simulated wallet, for an integration that goes through its bridge.
+  walletUrl?: string;
   database: {
     host: string;
     port: number;
@@ -44,6 +46,9 @@ export function resolveEnvironment(
   return {
     name: "local",
     payrefUrl: `http://127.0.0.1:${required(env, region.portEnv)}`,
+    ...(integration.contract === "wallet-bridge"
+      ? { walletUrl: `http://127.0.0.1:${required(env, "WALLET_PORT")}` }
+      : {}),
     database: {
       host: "127.0.0.1",
       port: Number(required(env, "MYSQL_PORT")),

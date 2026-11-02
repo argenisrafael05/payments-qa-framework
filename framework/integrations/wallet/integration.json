@@ -1,0 +1,23 @@
+{
+  "id": "wallet",
+  "name": "Wallet",
+  "region": "mx",
+  "contract": "wallet-bridge",
+  "notice": "webhook",
+  "inquiry": false,
+  "paymentMethod": {
+    "id": "wallet",
+    "keyEnv": "MX_WALLET_SECRET"
+  },
+  "amountLimits": { "min": 1, "max": 5000 },
+  "merchant": {
+    "id": "merchant-mx-1",
+    "keyEnv": "MX_MERCHANT_1_KEY"
+  },
+  "otherMerchants": {
+    "another-merchant": {
+      "id": "merchant-mx-2",
+      "keyEnv": "MX_MERCHANT_2_KEY"
+    }
+  }
+}

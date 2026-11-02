@@ -78,3 +78,34 @@ describe("the state of the reference", () => {
     });
   });
 });
+
+describe("the payment resource of a reference", () => {
+  const sameResource = extraChecks["same-resource"];
+  // The log of the bridge with one row each time the merchant asked for the resource.
+  const askedFor = (...resources: string[]) =>
+    ({
+      db: {
+        query: async () => [
+          resources.map((id, index) => ({ id: index + 1, resource_id: id })),
+        ],
+      } as unknown as Pool,
+      created: { code: "12345678901234" },
+      resource: { id: resources.at(-1) },
+    }) as unknown as PaymentContext;
+
+  it("finds one resource when the merchant asked twice for an unpaid reference", async () => {
+    expect(await sameResource.run(askedFor("wq_1", "wq_1"))).toMatchObject({
+      result: "match",
+      expected: "1 resource: wq_1",
+      found: "1 resource: wq_1",
+    });
+  });
+
+  it("finds a second resource the bridge should not have made", async () => {
+    expect(await sameResource.run(askedFor("wq_1", "wq_2"))).toMatchObject({
+      result: "mismatch",
+      expected: "1 resource: wq_2",
+      found: "2 resources: wq_1, wq_2",
+    });
+  });
+});

@@ -1,0 +1,91 @@
+[
+  {
+    "id": "F08-01",
+    "title": "A late webhook of a reference that expired after its resource is rejected",
+    "flow": "transition",
+    "reference": {
+      "type": ["single", "recurring"],
+      "amountType": "fixed",
+      "expiresOn": "2026-11-15"
+    },
+    "time": "2026-11-20T12:00:00",
+    "from": "expired",
+    "objective": { "step": "notice", "expect": "R-103" },
+    "tags": ["hu-11", "hu-12"],
+    "notes": "PayRef 1.0 does not check the expiry again in the webhook: that is its bug 6."
+  },
+  {
+    "id": "F08-02",
+    "title": "A late webhook of a reference cancelled after its resource is rejected",
+    "flow": "transition",
+    "reference": {
+      "type": ["single", "recurring"],
+      "amountType": "fixed"
+    },
+    "from": "cancelled",
+    "objective": { "step": "notice", "expect": "R-105" },
+    "tags": ["hu-11", "hu-12"],
+    "notes": "PayRef 1.0 answers the wallet that it accepted the webhook, though the core rejected it: that is its bug 7. Only the framework sees that answer."
+  },
+  {
+    "id": "F08-03",
+    "title": "A webhook with another amount than its resource is rejected",
+    "flow": "payment",
+    "reference": {
+      "type": "single",
+      "amountType": ["fixed", "open"]
+    },
+    "objective": {
+      "step": "notice",
+      "expect": "R-104",
+      "caller": "other-amount"
+    },
+    "tags": ["hu-11", "hu-12"]
+  },
+  {
+    "id": "F08-04",
+    "title": "A webhook without a signature gets 401",
+    "flow": "payment",
+    "reference": {
+      "type": "single",
+      "amountType": "fixed"
+    },
+    "objective": {
+      "step": "notice",
+      "expect": 401,
+      "caller": "unsigned"
+    },
+    "tags": ["hu-09", "hu-11"]
+  },
+  {
+    "id": "F08-05",
+    "title": "A webhook with a signature that does not match gets 401",
+    "flow": "payment",
+    "reference": {
+      "type": "single",
+      "amountType": "fixed"
+    },
+    "objective": {
+      "step": "notice",
+      "expect": 401,
+      "caller": "bad-signature"
+    },
+    "tags": ["hu-09", "hu-11"],
+    "notes": "PayRef 1.0 takes any signature, as long as there is one: that is its bug 5."
+  },
+  {
+    "id": "F08-06",
+    "title": "A webhook of a resource nobody created is not applied",
+    "flow": "payment",
+    "reference": {
+      "type": "single",
+      "amountType": "fixed"
+    },
+    "objective": {
+      "step": "notice",
+      "expect": "R-101",
+      "caller": "unknown-resource"
+    },
+    "tags": ["hu-11"]
+  }
+]

@@ -1,6 +1,7 @@
 import type { CaseRecord, ReadingRecord, Recorder } from "./evidence.ts";
 import type { Exchange, JsonObject } from "./http.ts";
 import { judge, type Expectation } from "./judge.ts";
+import { isObservation, verdictOf, type Observation } from "./observation.ts";
 import {
   checkProblem,
   frameworkProblem,
@@ -15,7 +16,9 @@ export type Step<C> = {
   kind: "executes" | "observes";
   // The business steps it carries out, as a case names them in its objective.
   covers: readonly string[];
-  run(context: C): Promise<Exchange>;
+  // A step that executes gets a response, and the judge reads it. One that observes brings what
+  // it saw in the database.
+  run(context: C): Promise<Exchange | Observation>;
   // What it expects, from what the next step expects. Without it, it only has to succeed.
   expects?(next: Expectation): Expectation;
   // Keeps what the next steps need, from a response that succeeded.
@@ -67,10 +70,15 @@ export async function runCase<C>(
     }
     recorder.beginStep(index);
     try {
-      const verdict = judge(
-        await step.run(context),
-        expectations[index] ?? success,
-      );
+      const outcome = await step.run(context);
+      const expectation = expectations[index] ?? success;
+      let verdict;
+      if (isObservation(outcome)) {
+        recorder.recordReadings(outcome.readings);
+        verdict = verdictOf(outcome, expectation);
+      } else {
+        verdict = judge(outcome, expectation);
+      }
       recorder.endStep(verdict);
       if (verdict.succeeded && verdict.body !== undefined) {
         step.keep?.(context, verdict.body);

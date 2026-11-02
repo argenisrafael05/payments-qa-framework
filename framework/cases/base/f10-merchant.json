@@ -205,5 +205,20 @@
     },
     "checks": ["reference-state"],
     "tags": ["hu-07"]
+  },
+  {
+    "id": "F10-14",
+    "title": "Another merchant cannot ask for the payment resource of a reference that is not its own",
+    "flow": "payment",
+    "reference": {
+      "type": "single",
+      "amountType": "fixed"
+    },
+    "objective": {
+      "step": "request",
+      "expect": "R-101",
+      "caller": "another-merchant"
+    },
+    "tags": ["hu-07", "hu-11"]
   }
 ]

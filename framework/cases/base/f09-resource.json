@@ -1,0 +1,15 @@
+[
+  {
+    "id": "F09-01",
+    "title": "Asking again for the resource of an unpaid reference gives the same one",
+    "flow": "transition",
+    "reference": {
+      "type": ["single", "recurring"],
+      "amountType": "fixed"
+    },
+    "from": "created",
+    "objective": { "step": "request", "expect": "OK" },
+    "checks": ["same-resource"],
+    "tags": ["hu-11"]
+  }
+]

@@ -45,7 +45,7 @@ describe("the flows", () => {
       from: "active" | "paid" | "cancelled" | "expired",
       event: string,
     ) =>
-      flowOf("transition", supermarket, { from, event }).map(
+      flowOf("transition", supermarket, { transition: { from, event } }).map(
         (step) => step.name,
       );
     expect(names("paid", "cancel")).toEqual([
@@ -86,9 +86,9 @@ describe("the flows", () => {
       "notice",
     ]);
     expect(
-      flowOf("transition", bank, { from: "paid", event: "view" }).map(
-        (step) => step.name,
-      ),
+      flowOf("transition", bank, {
+        transition: { from: "paid", event: "view" },
+      }).map((step) => step.name),
     ).toEqual([
       "merchant-token",
       "create-reference",
@@ -130,7 +130,7 @@ describe("the flows", () => {
   it("takes the payment of the bank to its state in the window, then fires its event", () => {
     const bank = loadIntegration("bank");
     const names = (from: "pending" | "reversed", event: string) =>
-      flowOf("transition", bank, { from, event })
+      flowOf("transition", bank, { transition: { from, event } })
         .map((step) => step.name)
         .slice(3);
     expect(names("pending", "reversal")).toEqual(["request-first", "reversal"]);
