@@ -15,6 +15,7 @@
     "db:down": "docker compose down",
     "test": "node tools/test.ts",
     "test:1.0": "node tools/test.ts --payref 1.0",
+    "report": "node tools/report.ts",
     "test:unit": "vitest run --coverage",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
