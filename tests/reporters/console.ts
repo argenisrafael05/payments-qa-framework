@@ -9,7 +9,9 @@ import type {
   TestResult,
 } from "@playwright/test/reporter";
 import type { CaseRecord } from "../../framework/engine/evidence.ts";
-import { results, type Result } from "../../framework/engine/results.ts";
+import { outcomeOf, resultLabels } from "../../framework/engine/outcome.ts";
+import { writeReport } from "../../framework/engine/report.ts";
+import { results } from "../../framework/engine/results.ts";
 import {
   caseFile,
   readJson,
@@ -19,15 +21,6 @@ import {
 } from "../../framework/engine/run-files.ts";
 import { localTimestamp } from "../../framework/engine/time.ts";
 import { currentRun } from "../../framework/payments/run-setup.ts";
-
-const labels: Record<Result, string> = {
-  passed: "Passed",
-  failed: "Failed",
-  inconclusive: "Inconclusive",
-  not_run: "Not run",
-};
-
-type Outcome = { result: Result; approved: boolean; note?: string };
 
 // The console speaks only the framework's language: each case with its result when it
 // ends, and the four results at the end. They come from the run's files, never from the
@@ -73,7 +66,7 @@ export default class ConsoleReporter implements Reporter {
     const outcome = outcomeOf(record);
     const seconds = `${(result.duration / 1000).toFixed(1)}s`;
     console.log(
-      `  ${labels[outcome.result].padEnd(13)} ${test.title}  ${seconds}${
+      `  ${resultLabels[outcome.result].padEnd(13)} ${test.title}  ${seconds}${
         outcome.note === undefined ? "" : `\n  ${"".padEnd(13)} ${outcome.note}`
       }`,
     );
@@ -118,38 +111,15 @@ export default class ConsoleReporter implements Reporter {
           ? `   (${totals.approved} approved)`
           : "";
       console.log(
-        `  ${labels[name].padEnd(13)} ${String(totals[name]).padStart(3)}${extra}`,
+        `  ${resultLabels[name].padEnd(13)} ${String(totals[name]).padStart(3)}${extra}`,
       );
     }
     if (record.status === "interrupted") {
       console.log("\n  The run was interrupted.");
     }
-    console.log(`\n  Files: ${relative(process.cwd(), this.#run.directory)}\n`);
+    // The report is made from the files the run just saved (HU-05).
+    const report = writeReport(this.#run.directory);
+    console.log(`\n  Report: ${relative(process.cwd(), report)}`);
+    console.log(`  Files:  ${relative(process.cwd(), this.#run.directory)}\n`);
   }
-}
-
-// A case without its file never started. One whose file never finished could not be tested.
-function outcomeOf(record: CaseRecord | undefined): Outcome {
-  if (record === undefined) {
-    return { result: "not_run", approved: false, note: "it never started" };
-  }
-  if (record.status !== "finished" || record.result === undefined) {
-    return {
-      result: "inconclusive",
-      approved: false,
-      note: "the case did not finish",
-    };
-  }
-  if (record.result === "passed" && record.approved !== true) {
-    return {
-      result: "passed",
-      approved: false,
-      note: `not approved: the evidence is incomplete (${record.evidence?.missing.join("; ")})`,
-    };
-  }
-  return {
-    result: record.result,
-    approved: record.approved === true,
-    note: record.reason,
-  };
 }
