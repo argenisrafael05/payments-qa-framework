@@ -208,3 +208,79 @@ export const paymentSchema = {
     authorization: { type: "string" },
   }),
 };
+
+export type PaymentResourceBody = { reference: string; amount: number };
+
+// The merchant asks the bridge of the wallet for a payment resource, a QR or a link, with its
+// token. The amount is what the customer pays, like in a standard request.
+export const paymentResourceSchema = {
+  tags: ["wallet bridge"],
+  body: {
+    type: "object",
+    properties: {
+      reference: referenceCode,
+      amount: {
+        type: "number",
+        description:
+          "Any number. An amount that is not valid for the reference gets R-104, and it is never rounded.",
+      },
+    },
+    required: ["reference", "amount"],
+    additionalProperties: false,
+  },
+  response: responses({
+    resource: { type: "string" },
+    qr: { type: "string" },
+    link: { type: "string" },
+  }),
+};
+
+export type WalletWebhookBody = {
+  resource: string;
+  amount: number;
+  paidAt: string;
+};
+
+// The webhook of the wallet, signed with its key. The bridge answers in the format of the
+// wallet, with its own codes, and a missing or wrong signature gets 401.
+export const walletWebhookSchema = {
+  tags: ["wallet bridge"],
+  body: {
+    type: "object",
+    properties: {
+      resource: { type: "string", minLength: 1, maxLength: 40 },
+      amount: { type: "number" },
+      paidAt: { type: "string", format: "date-time" },
+    },
+    required: ["resource", "amount", "paidAt"],
+    additionalProperties: false,
+  },
+  response: {
+    200: {
+      type: "object",
+      properties: {
+        result: {
+          type: "string",
+          enum: [
+            "accepted",
+            "unknown-resource",
+            "already-paid",
+            "expired",
+            "invalid-amount",
+            "cancelled",
+            "repeated",
+            "window-closed",
+            "payment-in-progress",
+          ],
+        },
+        message: { type: "string" },
+        folio: { type: "string" },
+        authorization: { type: "string" },
+      },
+      required: ["result", "message"],
+    },
+    400: errorResponse,
+    401: errorResponse,
+    500: technicalErrorResponse,
+  },
+};

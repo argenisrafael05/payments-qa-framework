@@ -28,7 +28,10 @@ export function createAuth(
       id: merchant.id,
     });
   }
-  for (const method of region.paymentMethods) {
+  // A third party never gets a token: it signs what it sends (HU-11).
+  for (const method of region.paymentMethods.filter(
+    (each) => each.kind === "standard",
+  )) {
     keys.set(required(env, method.keyEnv), {
       role: "paymentMethod",
       id: method.id,

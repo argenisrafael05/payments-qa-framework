@@ -1,0 +1,11 @@
+{
+  "name": "wallet-sim",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file=../.env.example --env-file-if-exists=../.env src/server.ts"
+  },
+  "dependencies": {
+    "fastify": "^5.12.7"
+  }
+}

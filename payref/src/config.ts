@@ -28,11 +28,14 @@ export type MerchantConfig = {
   keyEnv: string;
 };
 
+// A standard payment method exchanges its key for a token. A third party, like the wallet,
+// signs with its key instead, and PayRef calls its API, which runs on this machine (HU-11).
 export type PaymentMethodConfig = {
   id: string;
   name: string;
-  kind: "standard";
+  kind: "standard" | "third-party";
   keyEnv: string;
+  portEnv?: string;
   operations: Operation[];
   amountLimits: { min: number; max: number };
   // The reversal window of a bank: its request leaves the payment pending, and the notice
