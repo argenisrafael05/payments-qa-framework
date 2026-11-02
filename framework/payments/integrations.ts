@@ -15,11 +15,12 @@ const integrationSchema = z.strictObject({
   id: z.string().regex(/^[a-z][a-z0-9-]*$/),
   name: z.string().min(1),
   region: z.enum(["mx", "sa"]),
-  // The contract its payment method speaks.
-  contract: z.enum(["standard"]),
-  // How the request and the notice arrive: together in one call, or the request first and its
-  // notice after it, like a bank.
-  notice: z.enum(["together", "separate"]),
+  // The contract its payment method speaks: the standard one, or the bridge of PayRef to a
+  // third party like the wallet, which has its own client in its folder.
+  contract: z.enum(["standard", "wallet-bridge"]),
+  // How the request and the notice arrive: together in one call, the request first and its
+  // notice after it, like a bank, or a payment resource and then a webhook, like a wallet.
+  notice: z.enum(["together", "separate", "webhook"]),
   // Whether its payment method inquires before it pays. The inquiry is optional, and some
   // only pay.
   inquiry: z.boolean(),

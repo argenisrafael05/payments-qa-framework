@@ -12,5 +12,12 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["framework", "payref", "tests", "tools", "*.config.ts"]
+  "include": [
+    "framework",
+    "payref",
+    "wallet-sim",
+    "tests",
+    "tools",
+    "*.config.ts"
+  ]
 }

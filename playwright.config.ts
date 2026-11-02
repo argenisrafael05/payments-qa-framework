@@ -24,16 +24,29 @@ export default defineConfig({
       { outputFolder: `${run.directory}/playwright-report`, open: "never" },
     ],
   ],
-  // PayRef starts in test mode, with an empty database, and stops when the run ends.
-  webServer: {
-    command: "npm run start --workspace payref",
-    port: Number(new URL(run.environment.payrefUrl).port),
-    env: {
-      REGION: run.integration.region,
-      PAYREF_MODE: "test",
-      PAYREF_VERSION: run.version,
+  // PayRef starts in test mode, with an empty database, and stops when the run ends. The
+  // simulated wallet starts with it when the integration goes through its bridge.
+  webServer: [
+    {
+      command: "npm run start --workspace payref",
+      port: Number(new URL(run.environment.payrefUrl).port),
+      env: {
+        REGION: run.integration.region,
+        PAYREF_MODE: "test",
+        PAYREF_VERSION: run.version,
+      },
+      reuseExistingServer: false,
+      timeout: 30_000,
     },
-    reuseExistingServer: false,
-    timeout: 30_000,
-  },
+    ...(run.environment.walletUrl === undefined
+      ? []
+      : [
+          {
+            command: "npm run start --workspace wallet-sim",
+            port: Number(new URL(run.environment.walletUrl).port),
+            reuseExistingServer: false,
+            timeout: 30_000,
+          },
+        ]),
+  ],
 });

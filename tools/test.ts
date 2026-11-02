@@ -1,6 +1,9 @@
 import { spawnSync } from "node:child_process";
 import { loadEnvFiles } from "../framework/payments/environment.ts";
-import { listIntegrations } from "../framework/payments/integrations.ts";
+import {
+  listIntegrations,
+  loadIntegration,
+} from "../framework/payments/integrations.ts";
 import {
   checkConfig,
   checkDatabase,
@@ -92,6 +95,13 @@ async function preflight(id: string): Promise<"ready" | "skip" | "stop"> {
       () => checkPortFree(Number(new URL(environment().payrefUrl).port)),
     ],
   ];
+  if (loadIntegration(id).contract === "wallet-bridge") {
+    checks.push([
+      "The port of the simulated wallet is free",
+      "run",
+      () => checkPortFree(Number(new URL(environment().walletUrl ?? "").port)),
+    ]);
+  }
   for (const [text, stops, check] of checks) {
     try {
       await check();

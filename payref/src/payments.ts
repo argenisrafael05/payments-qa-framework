@@ -30,8 +30,9 @@ type Dependencies = {
   bugs: ReadonlySet<number>;
 };
 
-type Reference = {
+export type Reference = {
   code: string;
+  merchantId: string;
   status: "active" | "paid" | "cancelled";
   type: "single" | "recurring";
   amountType: "fixed" | "open";
@@ -39,7 +40,7 @@ type Reference = {
   expiresOn: string | null;
 };
 
-type Rejection = (typeof rejections)[keyof typeof rejections];
+export type Rejection = (typeof rejections)[keyof typeof rejections];
 
 type NewPayment = {
   reference: Reference;
@@ -94,60 +95,7 @@ export function registerPayments(
     },
   );
 
-  // What every payment goes through, in one call or in its request, in the order of 8.4.
-  async function validate(
-    body: PaymentBody,
-    paymentMethodId: string,
-    now: Date,
-  ): Promise<
-    { reference: Reference; amount: number } | { rejection: Rejection }
-  > {
-    await settleWindows(db, region, body.reference, now);
-    const reference = await findReference(db, body.reference);
-    if (!reference) {
-      return { rejection: rejections.notFound };
-    }
-    // A cancelled reference is never paid, and this goes before its expiry (8.4).
-    if (reference.status === "cancelled") {
-      return { rejection: rejections.cancelled };
-    }
-    const expired = checkExpiry(reference.expiresOn, now, region, bugs);
-    if (expired) {
-      return { rejection: expired };
-    }
-    const checked = checkAmount(
-      body.amount,
-      reference,
-      paymentMethodOf(region, paymentMethodId),
-      region,
-      bugs,
-    );
-    if ("rejection" in checked) {
-      return checked;
-    }
-    // A single reference takes one payment, whatever sequence comes, and this goes before the
-    // sequence: that is why a repeated notice on a paid single gets R-102 (8.4).
-    if (
-      reference.type === "single" &&
-      (await hasConfirmedPayment(db, reference.code))
-    ) {
-      return { rejection: rejections.alreadyPaid };
-    }
-    // While the window of another payment runs, the reference takes no other request, single or
-    // recurring (HU-10).
-    if (await hasPaymentInWindow(db, region, reference.code)) {
-      return { rejection: rejections.paymentInProgress };
-    }
-    // The sequence belongs to the payment method: one it already used is a repeated notice.
-    // Bug 1: the repeated notice registers another payment.
-    if (
-      !bugs.has(1) &&
-      (await sequenceUsed(db, paymentMethodId, body.sequence))
-    ) {
-      return { rejection: rejections.repeatedNotice };
-    }
-    return { reference, amount: checked.amount };
-  }
+  const { validate } = paymentRules({ db, region, bugs });
 
   // The payment request and the payment notice in one call, like a supermarket that only
   // calls once the customer has paid.
@@ -337,6 +285,72 @@ export function registerPayments(
   }
 }
 
+// The rules every payment goes through, shared by the routes of the payment methods and by the
+// bridge of the wallet, which reuses the standard request and notice (HU-11).
+export function paymentRules({ db, region, bugs }: Omit<Dependencies, "auth">) {
+  // What every payment goes through, in the order of 8.4: in one call, in its request, or in what
+  // the bridge of the wallet asks for. A request for a payment resource brings no sequence yet.
+  async function validate(
+    body: { reference: string; amount: number; sequence?: string },
+    paymentMethodId: string,
+    now: Date,
+    checks: { expiry: boolean } = { expiry: true },
+  ): Promise<
+    { reference: Reference; amount: number } | { rejection: Rejection }
+  > {
+    await settleWindows(db, region, body.reference, now);
+    const reference = await findReference(db, body.reference);
+    if (!reference) {
+      return { rejection: rejections.notFound };
+    }
+    // A cancelled reference is never paid, and this goes before its expiry (8.4).
+    if (reference.status === "cancelled") {
+      return { rejection: rejections.cancelled };
+    }
+    const expired = checks.expiry
+      ? checkExpiry(reference.expiresOn, now, region, bugs)
+      : undefined;
+    if (expired) {
+      return { rejection: expired };
+    }
+    const checked = checkAmount(
+      body.amount,
+      reference,
+      paymentMethodOf(region, paymentMethodId),
+      region,
+      bugs,
+    );
+    if ("rejection" in checked) {
+      return checked;
+    }
+    // A single reference takes one payment, whatever sequence comes, and this goes before the
+    // sequence: that is why a repeated notice on a paid single gets R-102 (8.4).
+    if (
+      reference.type === "single" &&
+      (await hasConfirmedPayment(db, reference.code))
+    ) {
+      return { rejection: rejections.alreadyPaid };
+    }
+    // While the window of another payment runs, the reference takes no other request, single or
+    // recurring (HU-10).
+    if (await hasPaymentInWindow(db, region, reference.code)) {
+      return { rejection: rejections.paymentInProgress };
+    }
+    // The sequence belongs to the payment method: one it already used is a repeated notice.
+    // Bug 1: the repeated notice registers another payment.
+    if (
+      body.sequence !== undefined &&
+      !bugs.has(1) &&
+      (await sequenceUsed(db, paymentMethodId, body.sequence))
+    ) {
+      return { rejection: rejections.repeatedNotice };
+    }
+    return { reference, amount: checked.amount };
+  }
+
+  return { validate };
+}
+
 async function movementOf(
   db: Pool,
   folio: string,
@@ -394,12 +408,12 @@ function paymentMethodOf(
   return method;
 }
 
-async function findReference(
+export async function findReference(
   db: Pool,
   code: string,
 ): Promise<Reference | undefined> {
   const [rows] = await db.query<RowDataPacket[]>(
-    `SELECT code, status, type, amount_type, amount, DATE_FORMAT(expires_on, '%Y-%m-%d') AS expires_on
+    `SELECT code, merchant_id, status, type, amount_type, amount, DATE_FORMAT(expires_on, '%Y-%m-%d') AS expires_on
      FROM payment_references WHERE code = ?`,
     [code],
   );
@@ -409,6 +423,7 @@ async function findReference(
   }
   return {
     code: row.code,
+    merchantId: row.merchant_id,
     status: row.status,
     type: row.type,
     amountType: row.amount_type,
@@ -417,7 +432,7 @@ async function findReference(
   };
 }
 
-async function registerPayment(
+export async function registerPayment(
   db: Pool,
   region: RegionConfig,
   payment: NewPayment,

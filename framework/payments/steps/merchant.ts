@@ -1,10 +1,11 @@
-import { need, type PaymentStep } from "../context.ts";
+import { apisOf, need, type PaymentStep } from "../context.ts";
 import {
   paymentNotice,
   paymentRequest,
   payTogether,
   reversal,
 } from "./payments.ts";
+import { frameworkWebhook, resourceRequest } from "./third-party.ts";
 
 // What the merchant does with its reference after creating it (HU-07).
 
@@ -71,4 +72,31 @@ export const reversalFirst: PaymentStep = {
   name: "reversal-first",
   title: "The payment method reverses the payment first",
   covers: [],
+};
+
+export const resourceFirst: PaymentStep = {
+  ...resourceRequest,
+  name: "resource-first",
+  title: "The merchant asks for the payment resource first",
+  covers: [],
+};
+
+export const webhookFirst: PaymentStep = {
+  ...frameworkWebhook,
+  name: "webhook-first",
+  title: "The framework sends the webhook first",
+  covers: [],
+};
+
+// A reference that is already expired at the time of the case asks for its resource at the time
+// it was created, the day before it expires, while it still applied (8.8).
+export const resourceWhileValid: PaymentStep = {
+  ...resourceFirst,
+  title:
+    "The merchant asks for the payment resource first, while the reference still applied",
+  run: (context) =>
+    resourceFirst.run({
+      ...context,
+      apis: apisOf(context.http.with({ testTime: context.creationTime })),
+    }),
 };

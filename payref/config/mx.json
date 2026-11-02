@@ -23,6 +23,15 @@
       "keyEnv": "MX_SUPERMARKET_KEY",
       "operations": ["inquiry", "payment"],
       "amountLimits": { "min": 1, "max": 10000 }
+    },
+    {
+      "id": "wallet",
+      "name": "Wallet",
+      "kind": "third-party",
+      "keyEnv": "MX_WALLET_SECRET",
+      "portEnv": "WALLET_PORT",
+      "operations": [],
+      "amountLimits": { "min": 1, "max": 5000 }
     }
   ]
 }

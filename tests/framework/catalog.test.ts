@@ -342,7 +342,9 @@ describe("the catalog", () => {
           },
         } as never,
       ]),
-    ).toThrow("F01-01: another merchant goes with an event of the merchant");
+    ).toThrow(
+      "F01-01: another merchant goes with what the merchant does with its reference",
+    );
   });
 
   it("takes the second sequence only with the flow that pays twice", () => {

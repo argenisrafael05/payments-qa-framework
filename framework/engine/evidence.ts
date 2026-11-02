@@ -145,6 +145,12 @@ export class Recorder {
     }
   }
 
+  recordReadings(readings: readonly ReadingRecord[]): void {
+    if (!this.finished) {
+      this.#current?.step.readings.push(...readings);
+    }
+  }
+
   endStep(verdict?: Verdict): void {
     const current = this.#current;
     if (this.finished || current === undefined) {

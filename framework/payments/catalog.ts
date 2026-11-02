@@ -9,6 +9,8 @@ import {
   isPaymentState,
   paymentStates,
   referenceStates,
+  resourceStates,
+  type NoticeSource,
   type State,
 } from "./flows/payment.ts";
 import type { Integration } from "./integrations.ts";
@@ -43,9 +45,12 @@ const caseSchema = z.strictObject({
   // The payment, the payment twice, which pays again with the same sequence or a new one, or
   // the payment of a code nobody created.
   flow: z.enum(["payment", "payment-twice", "unknown-reference", "transition"]),
-  // The state a transition starts from: one of its reference (8.6), or one of the payment of a
-  // bank after its request (8.7). Its objective is the event.
-  from: axis(z.enum([...referenceStates, ...paymentStates])).optional(),
+  // The state a transition starts from: one of its reference (8.6), one of the payment of a bank
+  // after its request (8.7), or the resource of a third party created and not paid (8.8). Its
+  // objective is the event.
+  from: axis(
+    z.enum([...referenceStates, ...paymentStates, ...resourceStates]),
+  ).optional(),
   // At which frontier of the reversal window the event arrives, for a transition from a pending
   // payment: a second before the window ends, or when it ends. The framework turns it into the
   // time of the window of each integration. Without it, the event comes right after the request.
@@ -58,7 +63,8 @@ const caseSchema = z.strictObject({
   secondSequence: axis(z.enum(["same", "new"])).optional(),
   // The time the case fixes, in the time of its region and without its zone, which the
   // framework adds. Only the cases at a time frontier fix it, and the rest run with the time of
-  // the server. A reference that is already expired at that time is created on its day, at 00:00.
+  // the server. A reference that is already expired at that time is created the day before it
+  // expires, at 00:00.
   time: z
     .string()
     .regex(
@@ -141,6 +147,8 @@ export type CaseEntry = {
   amount: number;
   secondSequence?: "same" | "new";
   from?: State;
+  // Who sends the webhook, when its integration pays with one.
+  source?: NoticeSource;
   case: Case;
 };
 
@@ -203,27 +211,43 @@ export function casesFor(
       );
     }
     checkTransition(item);
+    const sources = sourcesOf(item, integration, notApplicable);
     return variationsOf(item, amounts, integration).flatMap((variation) =>
       list(item.secondSequence ?? null).flatMap((secondSequence) =>
-        list(item.from ?? null).map((from) => {
-          const name = [
-            variation.variation,
-            secondSequence && `${secondSequence}-sequence`,
-            from && `from-${from}`,
-          ]
-            .filter(Boolean)
-            .join("-");
-          return {
-            name: `${item.id}__${integration.id}__${name}`,
-            variation: name,
-            reference: variation.reference,
-            amount: variation.amount,
-            ...(secondSequence === null ? {} : { secondSequence }),
-            ...(from === null ? {} : { from }),
-            ...(notApplicable === undefined ? {} : { notApplicable }),
-            case: item,
-          };
-        }),
+        list(item.from ?? null).flatMap((from) =>
+          sources.map((source) => {
+            const cannotSend =
+              source === "third-party"
+                ? onlyTheFramework[item.objective.caller ?? ""]
+                : undefined;
+            const name = [
+              variation.variation,
+              secondSequence && `${secondSequence}-sequence`,
+              from && `from-${from}`,
+              source &&
+                `by-${source === "framework" ? "framework" : integration.id}`,
+            ]
+              .filter(Boolean)
+              .join("-");
+            return {
+              name: `${item.id}__${integration.id}__${name}`,
+              variation: name,
+              reference: variation.reference,
+              amount: variation.amount,
+              ...(secondSequence === null ? {} : { secondSequence }),
+              ...(from === null ? {} : { from }),
+              ...(source === null ? {} : { source }),
+              ...(notApplicable === undefined
+                ? cannotSend === undefined
+                  ? {}
+                  : {
+                      notApplicable: `${integration.name} cannot send a webhook ${cannotSend}, so the case does not apply`,
+                    }
+                : { notApplicable }),
+              case: item,
+            };
+          }),
+        ),
       ),
     );
   });
@@ -235,6 +259,23 @@ export function casesFor(
     names.add(entry.name);
   }
   return entries;
+}
+
+// A case that ends at a notice of a third party runs with both sources of its webhook, the
+// framework and the third party itself (HU-12). One that ends before it has no webhook to send.
+function sourcesOf(
+  item: Case,
+  integration: Integration,
+  notApplicable: string | undefined,
+): (NoticeSource | null)[] {
+  const endsAtANotice = ["notice", "second-payment"].includes(
+    item.objective.step,
+  );
+  return integration.notice === "webhook" &&
+    endsAtANotice &&
+    notApplicable === undefined
+    ? ["framework", "third-party"]
+    : [null];
 }
 
 // What an integration can turn on. A step that only comes with one of them makes a case not
@@ -255,7 +296,7 @@ function applies(item: Case, integration: Integration): string | undefined {
       ? { from: "active" as const, event: step }
       : undefined;
   const has = (on: Integration) =>
-    flowOf(item.flow, on, transition).some((each) =>
+    flowOf(item.flow, on, { transition }).some((each) =>
       each.covers.includes(step),
     );
   if (!has(integration)) {
@@ -265,6 +306,36 @@ function applies(item: Case, integration: Integration): string | undefined {
       );
     }
     return `${integration.name} ${missing[step] ?? `has no ${step} step`}, so the case does not apply`;
+  }
+  // Only a third party sends a webhook: a late one, after its reference expired or was cancelled,
+  // and the ways of sending it.
+  const webhookOnly =
+    (webhookWays as readonly (string | undefined)[]).includes(
+      item.objective.caller,
+    ) ||
+    (item.flow === "transition" &&
+      step === "notice" &&
+      list(item.from ?? []).some((from) => !isPaymentState(from)));
+  if (webhookOnly && integration.notice !== "webhook") {
+    return `${integration.name} has no webhook, so the case does not apply`;
+  }
+  // Only a third party gives a payment resource (8.8), and only there the merchant asks for it,
+  // so another merchant asking for the request of any other integration does not apply.
+  const resourceOnly =
+    list(item.from ?? []).includes("created") ||
+    (step === "request" &&
+      item.objective.caller !== undefined &&
+      !isCallerKind(item.objective.caller));
+  if (resourceOnly && integration.notice !== "webhook") {
+    return `${integration.name} has no payment resource, so the case does not apply`;
+  }
+  // A third party has no token of its own: it signs (HU-11). A case that needs the token of its
+  // payment method, the other role or the 403 of an operation it does not have, does not apply.
+  const needsItsToken =
+    item.objective.caller === "other-role" ||
+    (item.objective.expect === 403 && item.objective.caller === undefined);
+  if (integration.notice === "webhook" && needsItsToken) {
+    return `${integration.name} has no token of its own, it signs, so the case does not apply`;
   }
   // The payment of a bank in its window, and its reversal, come with the window (HU-10).
   const withoutWindow =
@@ -283,6 +354,22 @@ function applies(item: Case, integration: Integration): string | undefined {
     : undefined;
 }
 
+// How a webhook can arrive besides the usual way, with another amount than its resource, without
+// its signature, with a wrong one or of a resource nobody created (8.8, 8.9). Only the framework
+// sends the last three: the third party itself always signs, and only pays what it made.
+const webhookWays = [
+  "other-amount",
+  "unsigned",
+  "bad-signature",
+  "unknown-resource",
+] as const;
+
+const onlyTheFramework: Record<string, string> = {
+  unsigned: "without its signature",
+  "bad-signature": "with a wrong signature",
+  "unknown-resource": "of a resource it never made",
+};
+
 // The ways a case can call its objective besides the usual one (8.9). Any other caller is
 // another merchant, by the alias its integration gives it.
 export const callerKinds = [
@@ -291,6 +378,7 @@ export const callerKinds = [
   "wrong-key",
   "other-role",
   "malformed-request",
+  ...webhookWays,
 ] as const;
 
 export type CallerKind = (typeof callerKinds)[number];
@@ -367,6 +455,14 @@ function checkCaller(item: Case, integration: Integration): void {
       `${item.id}: the token step goes with a wrong key, and a wrong key with the token step`,
     );
   }
+  if (
+    (webhookWays as readonly (string | undefined)[]).includes(caller) &&
+    step !== "notice"
+  ) {
+    throw new Error(
+      `${item.id}: a way of sending the webhook goes with the notice`,
+    );
+  }
   if (caller === undefined || isCallerKind(caller)) {
     if (caller === "malformed-request" && !sendsBody.includes(step)) {
       throw new Error(
@@ -375,9 +471,9 @@ function checkCaller(item: Case, integration: Integration): void {
     }
     return;
   }
-  if (step !== "view" && step !== "cancel") {
+  if (step !== "view" && step !== "cancel" && step !== "request") {
     throw new Error(
-      `${item.id}: another merchant goes with an event of the merchant, view or cancel`,
+      `${item.id}: another merchant goes with what the merchant does with its reference: view, cancel or ask for the payment resource`,
     );
   }
   if (integration.otherMerchants?.[caller] === undefined) {

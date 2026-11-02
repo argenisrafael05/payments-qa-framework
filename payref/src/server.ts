@@ -1,6 +1,7 @@
 import swagger from "@fastify/swagger";
 import Fastify from "fastify";
 import { createAuth } from "./auth.ts";
+import { registerWalletBridge } from "./bridge.ts";
 import { registerClock } from "./clock.ts";
 import { loadConfig, loadRegion } from "./config.ts";
 import { createPool, prepareDatabase } from "./db.ts";
@@ -29,6 +30,7 @@ const auth = createAuth(region);
 auth.register(app);
 registerReferences(app, { db, region, auth, bugs: config.bugs });
 registerPayments(app, { db, region, auth, bugs: config.bugs });
+registerWalletBridge(app, { db, region, auth, bugs: config.bugs });
 
 app.get("/health", { schema: { hide: true } }, async (_request, reply) => {
   const instance = { region: config.region, version: config.version };

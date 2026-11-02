@@ -31,11 +31,22 @@ function creationOf(changes: object): string | undefined {
 }
 
 describe("the time each step runs at", () => {
-  it("creates a reference already expired at the time of the case on its day, at 00:00", () => {
-    expect(creationOf({})).toBe("2026-11-15T00:00:00-06:00");
+  it("creates a reference already expired at the time of the case the day before it expires, at 00:00", () => {
+    expect(creationOf({})).toBe("2026-11-14T00:00:00-06:00");
     expect(creationOf({ time: "2026-11-16T00:00:00" })).toBe(
-      "2026-11-15T00:00:00-06:00",
+      "2026-11-14T00:00:00-06:00",
     );
+    // The first of a month goes back to the last day of the month before.
+    expect(
+      creationOf({
+        reference: {
+          type: "single",
+          amountType: "fixed",
+          expiresOn: "2026-12-01",
+        },
+        time: "2026-12-02T12:00:00",
+      }),
+    ).toBe("2026-11-30T00:00:00-06:00");
   });
 
   it("creates at the time of the case a reference that is still valid then", () => {

@@ -66,7 +66,7 @@ export function checkPortFree(port: number): Promise<void> {
       reject(
         error.code === "EADDRINUSE"
           ? new Error(
-              `The port ${port} is already in use. Is a PayRef running already? Stop it and run npm test again`,
+              `The port ${port} is already in use. Is PayRef or the simulated wallet running already? Stop it and run npm test again`,
             )
           : error,
       );
@@ -93,6 +93,23 @@ export async function checkPayRef(run: RunSetup): Promise<string> {
     throw new Error(problem);
   }
   return `PayRef answers in ${run.integration.region} with version ${run.version}, and so does its database`;
+}
+
+// The simulated wallet answers, for an integration that goes through its bridge.
+export async function checkWallet(url: string): Promise<string> {
+  try {
+    const response = await fetch(`${url}/health`, {
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (response.ok) {
+      return "The simulated wallet answers";
+    }
+    throw new Error(`it answered ${response.status}`);
+  } catch (error) {
+    throw new Error(
+      `The simulated wallet does not answer on ${url}: ${messageOf(error)}`,
+    );
+  }
 }
 
 export function healthProblem(

@@ -5,13 +5,20 @@ import type { Step } from "../engine/runner.ts";
 import type { Reference } from "./catalog.ts";
 import { MerchantApi } from "./clients/MerchantApi.ts";
 import { StandardPaymentMethodApi } from "./clients/StandardPaymentMethodApi.ts";
+import type {
+  ThirdPartyApi,
+  ThirdPartySimulator,
+} from "./clients/ThirdPartyApi.ts";
+import { WalletBridgeApi } from "../integrations/wallet/WalletBridgeApi.ts";
 import type { Environment, Role } from "./environment.ts";
 
 // A payment the API answered OK, as the database must keep it: pending while the window of its
 // request runs, confirmed by its notice or by the end of its window, or reversed.
 export type ExpectedPayment = {
   folio: string;
-  authorization: string;
+  // Known when the framework saw the answer of the API, and not when the wallet sent its own
+  // webhook.
+  authorization?: string;
   amount: number;
   sequence: string;
   paymentMethodId: string;
@@ -51,6 +58,11 @@ export type PaymentContext = {
   // payment.
   requested?: { folio: string };
   secondRequested?: { folio: string };
+  // The payment resource a third party gave, by its id, and its simulator, when the third party
+  // sends its own webhook.
+  resource?: { id: string };
+  secondResource?: { id: string };
+  simulator?: ThirdPartySimulator;
   // What the API answered OK. The database has to match it at the end (HU-01).
   payments: ExpectedPayment[];
   // The merchant cancelled the reference, and the API confirmed it.
@@ -59,15 +71,18 @@ export type PaymentContext = {
 
 export type PaymentStep = Step<PaymentContext>;
 
+// The steps of a third party talk to it through one interface, and the wallet brings its client.
 export type Apis = {
   merchant: MerchantApi;
   paymentMethod: StandardPaymentMethodApi;
+  thirdParty: ThirdPartyApi;
 };
 
 export function apisOf(http: Http): Apis {
   return {
     merchant: new MerchantApi(http),
     paymentMethod: new StandardPaymentMethodApi(http),
+    thirdParty: new WalletBridgeApi(http),
   };
 }
 
@@ -79,6 +94,7 @@ export function createContext(options: {
   creationTime?: string;
   time?: string;
   eventTime?: string;
+  simulator?: ThirdPartySimulator;
   caller?: Role;
   code?: string;
   amount: number;
@@ -98,6 +114,7 @@ export function createContext(options: {
     creationTime: options.creationTime,
     time: options.time,
     eventTime: options.eventTime,
+    simulator: options.simulator,
     caller: options.caller,
     created: options.code === undefined ? undefined : { code: options.code },
     amount: options.amount,

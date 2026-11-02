@@ -20,6 +20,7 @@ import {
 } from "./context.ts";
 import { extraChecks } from "./database/checks.ts";
 import { finalCheck } from "./database/final-check.ts";
+import { WalletSimulatorApi } from "../integrations/wallet/WalletSimulatorApi.ts";
 import { flowOf, isPaymentState } from "./flows/payment.ts";
 import type { Role } from "./environment.ts";
 import type { Integration } from "./integrations.ts";
@@ -78,6 +79,16 @@ export function executeCase(options: {
     reference: entry.reference,
     creationTime: creationTimeOf(entry, utcOffset),
     time,
+    simulator:
+      run.environment.walletUrl === undefined
+        ? undefined
+        : new WalletSimulatorApi(
+            new Http({
+              transport: options.transport,
+              baseUrl: run.environment.walletUrl,
+              recorder,
+            }),
+          ),
     eventTime:
       time === undefined || entry.case.after === undefined
         ? undefined
@@ -206,9 +217,10 @@ function arrivingAfter(
 }
 
 // Every step runs at the time of the case, but a reference that is already expired then was
-// created on its day, at 00:00, while it was still valid, because a past date is not created
-// (HU-07). The day of the case is the one written in its time, which is the time of its region.
-// A case that tests the creation itself keeps its time.
+// created the day before it expires, at 00:00, while it was still valid, because a past date is
+// not created (HU-07). The day before, so a bug that expires it a day early never hides another
+// one. The day of the case is the one written in its time, which is the time of its region. A
+// case that tests the creation itself keeps its time.
 export function creationTimeOf(
   entry: CaseEntry,
   utcOffset: string,
@@ -222,9 +234,13 @@ export function creationTimeOf(
   ) {
     return undefined;
   }
-  return time.slice(0, 10) > expiresOn
-    ? `${expiresOn}T00:00:00${utcOffset}`
-    : undefined;
+  if (time.slice(0, 10) <= expiresOn) {
+    return undefined;
+  }
+  const dayBefore = new Date(Date.parse(`${expiresOn}T00:00:00Z`) - 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+  return `${dayBefore}T00:00:00${utcOffset}`;
 }
 
 // The objectives the merchant calls. Any other one is the payment method's.
@@ -297,6 +313,32 @@ const waysOfCalling: Record<CallerKind, WayOfCalling> = {
       apis: apisOf(context.http.with({ breakBody: true })),
     }),
   },
+  // One whole unit more than its resource, a valid amount in any region.
+  "other-amount": {
+    how: "with another amount than its resource",
+    change: (context) => ({ ...context, amount: context.amount + 1 }),
+  },
+  unsigned: {
+    how: "without its signature",
+    change: (context) => ({
+      ...context,
+      paymentMethod: { ...context.paymentMethod, key: "" },
+    }),
+  },
+  "bad-signature": {
+    how: "signed with a key PayRef does not know",
+    change: (context) => ({
+      ...context,
+      paymentMethod: { ...context.paymentMethod, key: unknownKey },
+    }),
+  },
+  "unknown-resource": {
+    how: "of a resource nobody created",
+    change: (context) => ({
+      ...context,
+      resource: { id: `wq_${randomBytes(8).toString("hex")}` },
+    }),
+  },
 };
 
 // The objective, called the way the case says instead of the usual one (8.9).
@@ -328,13 +370,14 @@ export function planFor(
   entry: CaseEntry,
   integration: Integration,
 ): CasePlan<PaymentContext> {
-  const flow = flowOf(
-    entry.case.flow,
-    integration,
-    entry.from === undefined
-      ? undefined
-      : { from: entry.from, event: entry.case.objective.step },
-  );
+  const flow = flowOf(entry.case.flow, integration, {
+    transition:
+      entry.from === undefined
+        ? undefined
+        : { from: entry.from, event: entry.case.objective.step },
+    source: entry.source,
+    secondSequence: entry.secondSequence,
+  });
   // A payment in two calls is complete at its notice: an objective that expects OK ends at the
   // last step that covers it, and a rejection comes at the first one.
   const covering = flow.flatMap((step, index) =>
