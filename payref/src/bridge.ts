@@ -59,7 +59,7 @@ const walletResults: Record<"OK" | Rejection["code"], string> = {
 };
 
 // The bridge to a third party that makes a QR or a link and tells the payment with a webhook
-// (HU-11). It has no rules of its own: it reuses the standard request and notice of the core.
+// (US-11). It has no rules of its own: it reuses the standard request and notice of the core.
 export function registerWalletBridge(
   app: FastifyInstance,
   { db, region, auth, bugs }: Dependencies,
@@ -86,7 +86,7 @@ export function registerWalletBridge(
       const now = nowOf(request);
       const { reference: code, amount } = request.body;
       const reference = await findReference(db, code);
-      // A reference of another merchant does not exist for this one (HU-07).
+      // A reference of another merchant does not exist for this one (US-07).
       const validated =
         reference?.merchantId === callerOf(request).id
           ? await validate({ reference: code, amount }, walletId, now)
@@ -191,7 +191,7 @@ export function registerWalletBridge(
   });
 
   // The webhook validates everything again, in case something changed since the resource: its
-  // sequence is the id of the resource, so a repeated one is a repeated notice (HU-11).
+  // sequence is the id of the resource, so a repeated one is a repeated notice (US-11).
   async function pay(
     resource: Resource,
     notice: WalletWebhookBody,

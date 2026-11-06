@@ -28,7 +28,7 @@ const integrationSchema = z.strictObject({
   // The limits of its payment method for an open amount, the same as in PayRef.
   amountLimits: z.strictObject({ min: z.number(), max: z.number() }),
   // The reversal window of its payment method, the same as in PayRef, when it turns it on: the
-  // framework needs it to know what the database must have when the window ends (HU-10).
+  // framework needs it to know what the database must have when the window ends (US-10).
   reversalWindow: z
     .strictObject({ minutes: z.number().int().positive() })
     .optional(),

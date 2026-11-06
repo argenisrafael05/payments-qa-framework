@@ -9,7 +9,7 @@ import {
 import { webhooksOf } from "../database/readings.ts";
 import { keepPayment } from "./payments.ts";
 
-// What a third party does in a payment, like the wallet (HU-11): the merchant asks it for a
+// What a third party does in a payment, like the wallet (US-11): the merchant asks it for a
 // payment resource, a QR or a link, and the third party tells the payment with a webhook. The
 // sequence of the payment in PayRef is the id of its resource.
 
@@ -42,7 +42,7 @@ function resourceStep(step: Described & { keepAs: Which }): PaymentStep {
 }
 
 // The framework sends the webhook itself, signed as the payment method would, so it sees what
-// the bridge answers (HU-12).
+// the bridge answers (US-12).
 function frameworkWebhookStep(step: Described & { of: Which }): PaymentStep {
   return {
     name: step.name,
@@ -61,7 +61,7 @@ function frameworkWebhookStep(step: Described & { of: Which }): PaymentStep {
 }
 
 // The third party sends the webhook itself once the framework tells its simulator the customer
-// paid, so the framework never sees what the bridge answered (HU-12). The step observes: it waits
+// paid, so the framework never sees what the bridge answered (US-12). The step observes: it waits
 // until PayRef keeps a new webhook of the resource in the log of the bridge, and reads its code.
 function observedWebhookStep(step: Described & { of: Which }): PaymentStep {
   return {

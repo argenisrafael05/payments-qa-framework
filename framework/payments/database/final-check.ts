@@ -7,7 +7,7 @@ import {
   type Movement,
 } from "./readings.ts";
 
-// The database has the last word (HU-01): the movements of the reference must match what the
+// The database has the last word (US-01): the movements of the reference must match what the
 // case expected and the API confirmed, no more and no less. It runs once at the end of every
 // case, also after a failure, because the most expensive bug is an error that still left the
 // payment.

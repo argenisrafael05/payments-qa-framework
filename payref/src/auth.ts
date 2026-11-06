@@ -28,7 +28,7 @@ export function createAuth(
       id: merchant.id,
     });
   }
-  // A third party never gets a token: it signs what it sends (HU-11).
+  // A third party never gets a token: it signs what it sends (US-11).
   for (const method of region.paymentMethods.filter(
     (each) => each.kind === "standard",
   )) {

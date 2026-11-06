@@ -53,7 +53,7 @@ export type PaymentContext = {
   // another merchant or the other role (8.9).
   caller?: Role;
   tokens: { merchant?: string; paymentMethod?: string; caller?: string };
-  // The time the case fixes, and the one its event arrives at, after the request (HU-10).
+  // The time the case fixes, and the one its event arrives at, after the request (US-10).
   time?: string;
   eventTime?: string;
   // The request that waits for its notice, by the folio it got, and the one of a second
@@ -66,7 +66,7 @@ export type PaymentContext = {
   secondResource?: { id: string };
   simulator?: ThirdPartySimulator;
   // What the case expected and the API answered OK. The database has to match it at the end
-  // (HU-01).
+  // (US-01).
   payments: ExpectedPayment[];
   // The merchant cancelled the reference, and the API confirmed it.
   cancelled?: boolean;

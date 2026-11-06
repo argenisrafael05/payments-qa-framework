@@ -2,7 +2,7 @@ import { checkPayRef, checkWallet } from "../framework/payments/preflight.ts";
 import { currentRun } from "../framework/payments/run-setup.ts";
 
 // The last line of the quick check. Playwright starts PayRef before this runs, so the checks
-// that need it to be off, like its port, already ran in npm test (RE-17).
+// that need it to be off, like its port, already ran in npm test (US-06).
 export default async function globalSetup(): Promise<void> {
   try {
     const run = currentRun();

@@ -7,7 +7,7 @@ import {
 } from "./payments.ts";
 import { frameworkWebhook, resourceRequest } from "./third-party.ts";
 
-// What the merchant does with its reference after creating it (HU-07).
+// What the merchant does with its reference after creating it (US-07).
 
 export const viewReference: PaymentStep = {
   name: "view",

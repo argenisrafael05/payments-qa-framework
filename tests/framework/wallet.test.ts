@@ -17,7 +17,7 @@ import { loadIntegration } from "../../framework/payments/integrations.ts";
 import { observeWebhook } from "../../framework/payments/steps/third-party.ts";
 import { answered, reply, scripted, temporaryDirectory } from "./builders.ts";
 
-// The bridge of the wallet, read with its own template and signed as the wallet would (HU-11).
+// The bridge of the wallet, read with its own template and signed as the wallet would (US-11).
 
 describe("the bridge of the wallet", () => {
   it("sends the webhook without a signature when it has no key to sign with", async () => {

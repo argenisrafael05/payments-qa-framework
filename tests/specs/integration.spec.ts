@@ -4,7 +4,7 @@ import { approve, test } from "../fixtures/fixtures.ts";
 
 const { integration } = currentRun();
 
-// One generic spec for every integration: each case of the catalog becomes a test (HU-03). The
+// One generic spec for every integration: each case of the catalog becomes a test (US-03). The
 // test only runs its case. The judge and the checks decide, and approve() tells Playwright.
 for (const entry of casesFor(integration)) {
   test(

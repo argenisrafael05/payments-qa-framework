@@ -13,7 +13,7 @@ export type RunSetup = {
   version: "1.0" | "1.1";
 };
 
-// One run is one integration (HU-01). Its identity is fixed once, in the main process, and it
+// One run is one integration (US-01). Its identity is fixed once, in the main process, and it
 // reaches the workers through the environment, so every piece writes in the same folder.
 export function currentRun(env: NodeJS.ProcessEnv = process.env): RunSetup {
   const id = env.QA_INTEGRATION;

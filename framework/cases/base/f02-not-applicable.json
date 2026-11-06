@@ -14,7 +14,7 @@
       "step": "request",
       "expect": "R-101"
     },
-    "tags": ["hu-02", "hu-08", "hu-09"]
+    "tags": ["us-02", "us-08", "us-09"]
   },
   {
     "id": "F02-02",
@@ -30,7 +30,7 @@
       "step": "request",
       "expect": "R-103"
     },
-    "tags": ["hu-02", "hu-08", "hu-09"]
+    "tags": ["us-02", "us-08", "us-09"]
   },
   {
     "id": "F02-03",
@@ -45,6 +45,6 @@
       "step": "request",
       "expect": "R-105"
     },
-    "tags": ["hu-02", "hu-08", "hu-09"]
+    "tags": ["us-02", "us-08", "us-09"]
   }
 ]

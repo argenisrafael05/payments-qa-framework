@@ -4,7 +4,7 @@ import { regions } from "./regions.ts";
 
 const root = new URL("../../", import.meta.url);
 
-// The values of .env win, and .env.example fills in the rest, the same as PayRef (RE-16). A
+// The values of .env win, and .env.example fills in the rest, the same as PayRef. A
 // variable that already comes from the shell wins over both.
 export function loadEnvFiles(): void {
   for (const name of [".env", ".env.example"]) {

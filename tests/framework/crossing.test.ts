@@ -13,7 +13,7 @@ import { loadIntegration } from "../../framework/payments/integrations.ts";
 import type { RunSetup } from "../../framework/payments/run-setup.ts";
 import { scripted, temporaryDirectory } from "./builders.ts";
 
-// The catalog crossed with an integration made only of config (HU-03, HU-13): it builds its
+// The catalog crossed with an integration made only of config (US-03, US-13): it builds its
 // cases without touching code, and what does not apply to it is not run, with its reason.
 
 // An integration made only of config, in a folder of its own.

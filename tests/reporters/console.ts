@@ -121,7 +121,7 @@ export default class ConsoleReporter implements Reporter {
     if (record.status === "interrupted") {
       console.log("\n  The run was interrupted.");
     }
-    // The report is made from the files the run just saved (HU-05).
+    // The report is made from the files the run just saved (US-05).
     const report = writeReport(this.#run.directory);
     console.log(`\n  Report: ${relative(process.cwd(), report)}`);
     console.log(`  Files:  ${relative(process.cwd(), this.#run.directory)}\n`);

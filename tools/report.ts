@@ -4,7 +4,7 @@ import { writeReport } from "../framework/engine/report.ts";
 import { runsDirectory } from "../framework/engine/run-files.ts";
 
 // npm run report [-- <run folder>]: writes the report of a run again, from what it saved
-// (HU-05). Without a folder, it takes the last run.
+// (US-05). Without a folder, it takes the last run.
 const given = process.argv[2];
 const runs = existsSync(runsDirectory) ? readdirSync(runsDirectory).sort() : [];
 const last = runs.at(-1);

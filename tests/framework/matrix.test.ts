@@ -2,8 +2,8 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { loadCatalog } from "../../framework/payments/catalog.ts";
 
-// The matrix is written by hand, in Spanish, and this keeps it from falling behind the
-// catalog: every case is in it, every row has its case, and the HU match the tags.
+// The matrix is written by hand, and this keeps it from falling behind the
+// catalog: every case is in it, every row has its case, and the stories match the tags.
 
 const matrix = readFileSync(
   new URL("../../docs/test-matrix.md", import.meta.url),
@@ -31,11 +31,11 @@ describe("the matrix of cases", () => {
     );
   });
 
-  it("gives each case the same HU as its tags", () => {
+  it("gives each case the same stories as its tags", () => {
     for (const item of cases) {
       const row = rows.find((cells) => cells[1] === item.id);
       expect(stories(row?.[5]), item.id).toEqual(
-        item.tags.filter((tag) => /^hu-\d+$/.test(tag)).sort(),
+        item.tags.filter((tag) => /^us-\d+$/.test(tag)).sort(),
       );
     }
   });

@@ -12,7 +12,7 @@ import { reportScript, reportStyles } from "./report-page.ts";
 import type { Result } from "./results.ts";
 import { caseFile, readJson, runFile, type RunRecord } from "./run-files.ts";
 
-// The report of a run (HU-05): the summary first, and every test open down to its steps, its
+// The report of a run (US-05): the summary first, and every test open down to its steps, its
 // checks and its evidence. It only shows what the run saved, so it can be made again at any
 // time, also for a run that was cut, and it never recommends nor guesses a cause.
 

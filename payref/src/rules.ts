@@ -39,7 +39,7 @@ export function stateOf(
   return expired ? "expired" : reference.status;
 }
 
-// The amount of a payment (HU-08). Whatever makes it invalid, the answer is R-104, and it is
+// The amount of a payment (US-08). Whatever makes it invalid, the answer is R-104, and it is
 // never rounded: zero or negative, more decimals than its region, other than the fixed amount,
 // or outside the limits of the payment method for an open reference.
 export function checkAmount(

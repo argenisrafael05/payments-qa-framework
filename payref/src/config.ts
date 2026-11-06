@@ -29,7 +29,7 @@ export type MerchantConfig = {
 };
 
 // A standard payment method exchanges its key for a token. A third party, like the wallet,
-// signs with its key instead, and PayRef calls its API, which runs on this machine (HU-11).
+// signs with its key instead, and PayRef calls its API, which runs on this machine (US-11).
 export type PaymentMethodConfig = {
   id: string;
   name: string;
@@ -39,7 +39,7 @@ export type PaymentMethodConfig = {
   operations: Operation[];
   amountLimits: { min: number; max: number };
   // The reversal window: its request leaves the payment pending, and the notice confirms it, or
-  // the reversal undoes it, until the window ends (HU-10).
+  // the reversal undoes it, until the window ends (US-10).
   reversalWindow?: { minutes: number };
 };
 

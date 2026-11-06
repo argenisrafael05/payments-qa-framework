@@ -1,7 +1,7 @@
 import type { Pool, RowDataPacket } from "mysql2/promise";
 import type { RegionConfig } from "./config.ts";
 
-// The reversal window of a payment method (HU-10). Its request leaves the payment pending, and
+// The reversal window of a payment method (US-10). Its request leaves the payment pending, and
 // the window closes with whatever comes first: the notice, the reversal or its end.
 
 export type PendingPayment = {
@@ -11,7 +11,7 @@ export type PendingPayment = {
 };
 
 // The window is a rule of the config of a payment method: without it, the payment method is a
-// standard one (HU-10).
+// standard one (US-10).
 export function hasWindow(
   region: RegionConfig,
   paymentMethodId: string,
@@ -93,7 +93,7 @@ export async function confirmPayment(
 }
 
 // A payment in progress is a pending one whose window still runs. The pending payment of a
-// payment method without a window blocks nothing: its notice validates again (HU-08).
+// payment method without a window blocks nothing: its notice validates again (US-08).
 export async function hasPaymentInWindow(
   db: Pool,
   region: RegionConfig,
