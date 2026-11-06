@@ -10,7 +10,7 @@
     },
     "time": "2026-11-15T23:59:59",
     "objective": { "step": "notice", "expect": "OK" },
-    "tags": ["hu-02", "hu-09"]
+    "tags": ["us-02", "us-09"]
   },
   {
     "id": "F06-02",
@@ -23,7 +23,7 @@
     },
     "time": "2026-11-16T00:00:00",
     "objective": { "step": "request", "expect": "R-103" },
-    "tags": ["hu-02", "hu-09"]
+    "tags": ["us-02", "us-09"]
   },
   {
     "id": "F06-03",
@@ -36,12 +36,12 @@
     },
     "time": "2026-11-15T23:30:00",
     "objective": { "step": "notice", "expect": "OK" },
-    "tags": ["hu-02", "hu-09"],
+    "tags": ["us-02", "us-09"],
     "notes": "At 23:30 in Mexico it is already the next day in UTC."
   },
   {
     "id": "F06-04",
-    "title": "The inquiry tells an expired reference as expired",
+    "title": "The inquiry reports an expired reference as expired",
     "flow": "transition",
     "from": "expired",
     "reference": {
@@ -51,6 +51,6 @@
     },
     "time": "2026-11-20T12:00:00",
     "objective": { "step": "inquiry", "expect": "OK" },
-    "tags": ["hu-08"]
+    "tags": ["us-08"]
   }
 ]

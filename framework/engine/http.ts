@@ -40,7 +40,7 @@ export type OperationTemplate = {
   codes: Readonly<Record<string, string>>;
   // The field with the state of what the response describes, when it has one.
   stateField?: string;
-  // Hidden in the evidence copy (RNF-05).
+  // Hidden in the evidence copy (NFR-05).
   secrets?: { request?: readonly string[]; response?: readonly string[] };
   // Only an operation that can be repeated without risk is retried (3.1).
   repeatable: boolean;
@@ -74,7 +74,7 @@ export type CallChange = {
 // The gateway sends these when the system did not answer (8.5).
 const gatewayStatuses = [408, 502, 503, 504];
 
-// The wrapper of every call (HU-01): it sends through the transport, retries only what failed
+// The wrapper of every call (US-01): it sends through the transport, retries only what failed
 // on the way, and leaves each attempt in the evidence.
 export class Http {
   readonly #transport: Transport;

@@ -1,39 +1,39 @@
 # payments-qa-framework
 
-Un framework para automatizar las pruebas de un orquestador de pagos. El pago se programa una sola vez, y cada forma de pagar nada más dice qué usa. Un súper, un banco y una wallet, que no trabajan igual, comparten una misma base de casos, con el mismo código.
+A test automation framework for a payments orchestrator. The payment flow is written once, and each way of paying just declares what it uses. A supermarket, a bank and a wallet don't work the same way, yet they share one base of cases and the same code.
 
-Lo que importa aquí es cómo está armado.
+What matters here is how it's built.
 
-## El simulador: PayRef
+## The simulator: PayRef
 
-Un framework necesita algo que probar, y no puede ser un sistema real. Por eso PayRef vive en este repo. Es un orquestador de pagos inventado, con sus nombres, sus contratos y sus datos: conecta al merchant, que necesita cobrar, con quien le cobra al cliente.
+A framework needs something to test, and it can't be a real system. That's why PayRef lives in this repo. It's a made-up payments orchestrator, names, contracts and data included, and it connects the merchant, who needs to get paid, with whoever collects from the customer.
 
-Todo gira alrededor de la referencia de pago. El merchant la crea, y el cliente la paga donde prefiera. Puede ser única o recurrente, de monto fijo o libre, con fecha de vencimiento o sin ella, y eso da 8 tipos. Lo interesante es que cada forma de pagar le llega distinto a PayRef:
+Everything revolves around the payment reference. The merchant creates it, and the customer pays it wherever they prefer. It can be single or recurring, with a fixed or an open amount, with an expiry date or without one, which makes 8 types. The interesting part is that each way of paying reaches PayRef differently:
 
-| Payment method | Cómo paga                                                       | Lo que lo hace distinto                                      |
-| -------------- | --------------------------------------------------------------- | ------------------------------------------------------------ |
-| El súper       | Manda la solicitud y el aviso en una sola llamada               | Consulta la referencia antes de cobrar                       |
-| El banco       | Manda la solicitud, y después el aviso                          | Tiene una ventana de 2 minutos para reversar el pago         |
-| La wallet      | El merchant le pide un QR, y ella avisa del pago con un webhook | Firma lo que manda, no tiene token y habla su propio formato |
+| Payment method  | How it pays                                                          | What makes it different                                     |
+| --------------- | -------------------------------------------------------------------- | ----------------------------------------------------------- |
+| The supermarket | Sends the request and the notice in one call                         | Looks up the reference before charging                      |
+| The bank        | Sends the request, then the notice                                   | Has a 2-minute window to reverse the payment                |
+| The wallet      | The merchant asks it for a QR, and it reports the payment by webhook | Signs what it sends, has no token and speaks its own format |
 
-Comparten reglas en común, como la credencial, que la referencia exista, que siga vigente y que el monto sea válido, pero cada uno tiene sus particularidades. El banco protege su pago mientras corre la ventana, y la wallet vuelve a validar todo cuando llega su webhook. Cada rechazo tiene su código y viaja con un 200, así que un 200 no quiere decir que el pago pasó.
+They share some common rules, like the credential, whether the reference exists, whether it's still valid and whether the amount is right, but each one has its own quirks. The bank protects its payment while the window runs, and the wallet validates everything again when its webhook arrives. Each rejection has its own code and travels with a 200, so a 200 doesn't mean the payment went through.
 
-Hay dos regiones, México y Sudamérica, que se parecen pero tienen sus diferencias, y cada una tiene su propia base. La wallet también es simulada: otro proceso aparte, con su API, que hace el QR y le manda su webhook a PayRef.
+There are two regions, Mexico and South America, similar but with their differences, and each one has its own database. The wallet is simulated too: a separate process with its own API that makes the QR and sends its webhook to PayRef.
 
-PayRef tiene dos versiones: la 1.1 está bien, y la 1.0 llega con 8 bugs, como llegaría un release.
+PayRef comes in two versions: 1.1 works fine, and 1.0 ships with 8 bugs, the way a release would.
 
-## Cómo se abstrajo el framework
+## How the framework was abstracted
 
-El problema de fondo es que los métodos de pago cambian mucho: por su tipo, por su región o simplemente porque cada uno trabaja distinto. Este framework no pelea con esas diferencias. Las vuelve datos, y lo que no cambia se programa una sola vez. Así, lo que en otro lado sería un problema, aquí es una línea de config:
+The real problem is that payment methods change a lot: by type, by region, or simply because each one works differently. This framework doesn't fight those differences. It turns them into data, and what doesn't change gets written once. What would be a headache somewhere else is a line of config here:
 
-- Integrar un método de pago nuevo es una configuración.
-- Agregar un caso es escribir un JSON, sin programar.
-- Escala sin copiar: un caso corre en todas las integraciones que lo pueden hacer.
-- Se mantiene fácil: el flujo, el juez y la evidencia viven en un solo lugar, así que un cambio se hace una vez.
+- Adding a new payment method is configuration.
+- Adding a case is writing a JSON, no coding.
+- It scales without copying: a case runs on every integration that can do it.
+- It's easy to maintain: the flow, the judge and the evidence live in one place, so a change happens once.
 
-### Una integración es un JSON
+### An integration is a JSON
 
-Así entró el banco, sin una línea de código propia:
+This is how the bank came in, without a line of its own code:
 
 ```json
 {
@@ -53,11 +53,11 @@ Así entró el banco, sin una línea de código propia:
 }
 ```
 
-`notice` dice cómo llega el aviso, junto con la solicitud, por separado o por webhook, y con eso el framework arma el flujo. Su ventana de reverso es una línea: quien la prende recibe sus casos con la duración que traiga. El paso a paso está en [cómo agregar una integración o un caso](docs/adding-an-integration.md).
+`notice` says how the notice arrives, together with the request, separately or by webhook, and the framework builds the flow from that. The reversal window is one line: whoever turns it on gets its cases, with whatever duration it sets. The step by step is in [how to add an integration or a case](docs/adding-an-integration.md).
 
-### Un caso es un JSON
+### A case is a JSON
 
-Dice de dónde parte, adónde llega y qué espera ahí. No trae ni una aserción:
+It says where it starts, where it ends and what it expects there. There isn't a single assertion in it:
 
 ```json
 {
@@ -68,122 +68,126 @@ Dice de dónde parte, adónde llega y qué espera ahí. No trae ni una aserción
   "from": "pending",
   "after": "window-end",
   "objective": { "step": "reversal", "expect": "R-107" },
-  "tags": ["hu-10"]
+  "tags": ["us-10"]
 }
 ```
 
-Una lista saca una prueba por cada valor. Y lo que cambia por región se escribe por lo que es, como `window-end` o `extra-decimal`, y el framework pone el número de cada una.
+A list makes one test per value. And what changes by region is written by what it is, like `window-end` or `extra-decimal`, and the framework fills in the number for each one.
 
-### Eliges qué correr
+### You choose what to run
 
-Los casos salen de una base común, y el framework los cruza con cada integración: cada uno corre donde se puede hacer. Son 56 casos y 451 pruebas, y puedes correr todo, una integración, una familia o un solo caso. Lo que no le aplica a una integración no desaparece: sale como No ejecutado, con su razón, como "Bank has no webhook".
+Cases come from a shared base, and the framework crosses them with each integration, so each one runs wherever it can. That's 56 cases and 451 tests, and you can run everything, one integration, one family or a single case. What doesn't apply to an integration doesn't vanish: it shows up as Not run, with its reason, like "Bank has no webhook".
 
-### Lo demás no sabe de ninguna integración
+### The rest doesn't know about any integration
 
-| Pieza                  | Qué hace                                                                                                                                    |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Los flujos y los pasos | El pago, escrito una vez. La config escoge la variante                                                                                      |
-| Las plantillas         | Cómo leer cada API: en qué campo viene el código, qué pide un éxito y un diccionario que traduce sus códigos a los de PayRef                |
-| El juez                | Lee cada respuesta y dice si es la que el caso esperaba. Decide el código de negocio, no el 200, y revisa que no se fuguen datos internos   |
-| La revisión de la base | Tiene la última palabra: los movimientos tienen que cuadrar con lo que el caso esperaba y la API confirmó. Un cobro doble falla ahí también |
-| La evidencia           | Guarda cada paso, con las credenciales ocultas                                                                                              |
-| El reporte             | Se arma con lo que guardó la corrida, y deja auditar cada caso hasta sus peticiones                                                         |
+| Piece               | What it does                                                                                                                               |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| The flows and steps | The payment, written once. The config picks the variant                                                                                    |
+| The templates       | How to read each API: which field holds the code, what a success needs, and a dictionary that translates its codes into PayRef's           |
+| The judge           | Reads each response and says whether it's the one the case expected. The business code decides, not the 200, and no internal data can leak |
+| The database check  | Has the last word: the movements have to match what the case expected and the API confirmed. A double charge fails there too               |
+| The evidence        | Keeps every step, with the credentials hidden                                                                                              |
+| The report          | Built from what the run saved, and lets you audit each case down to its requests                                                           |
 
-Por eso la wallet, con su contrato distinto, solo trajo su cliente y su traducción. Su webhook se prueba de dos formas, firmado por el framework o mandado por la wallet simulada, para no depender de que el tercero esté listo.
+That's why the wallet, with its different contract, only brought its client and its translation. Its webhook is tested two ways, signed by the framework or sent by the simulated wallet, so nothing depends on the third party being ready.
 
-### Cómo se empaquetó
+### How it's packaged
 
 ```text
 framework/
-  engine/        el juez, el runner, la evidencia y el reporte. No sabe de pagos
-  payments/      el catálogo, los flujos, los pasos, los clientes y las revisiones de la base
-  cases/base/    los casos, un archivo por familia
-  integrations/  una carpeta por integración, con su config
-payref/          el simulador, con sus dos versiones
-wallet-sim/      la wallet simulada, un tercero aparte
-tests/           las pruebas del framework y el spec que corre los casos
-tools/           lo que hay detrás de npm test y npm run report
-docs/            requerimientos, análisis de pruebas, matriz de casos, el paso a paso y el resumen de cada fase
+  engine/        the judge, the runner, the evidence and the report. It knows nothing about payments
+  payments/      the catalog, the flows, the steps, the clients and the database checks
+  cases/base/    the cases, one file per family
+  integrations/  one folder per integration, with its config
+payref/          the simulator, with its two versions
+wallet-sim/      the simulated wallet, a third party of its own
+tests/           the framework's own tests and the spec that runs the cases
+tools/           what's behind npm test and npm run report
+docs/            requirements, test analysis, case matrix, framework tests and the step by step
 ```
 
-El framework nunca importa el código de PayRef. Le habla por HTTP y lee su base con un usuario que solo puede leer, y una regla de lint lo cuida.
+The framework never imports PayRef's code. It talks to it over HTTP and reads its database with a user that can only read, and a lint rule keeps it that way.
 
-## Por qué es rápido
+## Why it's fast
 
-Rápido para crecer:
+Fast to grow:
 
-- Una integración nueva es config de los dos lados, y entra con todo el catálogo.
-- Un caso nuevo es un JSON y su fila en la matriz.
-- Un error de dedo truena al cargar, antes de correr nada, y dice qué archivo y qué campo.
+- A new integration is config on both sides, and it gets the whole catalog.
+- A new case is a JSON and its row in the matrix.
+- A typo fails at load time, before anything runs, and says which file and which field.
 
-Rápido para correr:
+Fast to run:
 
-- La ventana del banco se prueba justo en su orilla, un segundo antes de cerrar y al cerrar, sin esperar 2 minutos. PayRef toma la hora de cada petición de un header, solo en modo de pruebas.
-- Ninguna prueba duerme. Lo que llega después, como el webhook, se espera preguntando con un máximo.
-- Una integración tarda de 2 a 17 segundos en esta máquina.
-- Las 166 pruebas del propio framework corren en menos de un segundo, sin PayRef y sin Docker.
+- The bank's window is tested right at its edge, one second before it closes and as it closes, without waiting 2 minutes. PayRef takes the time of each request from a header, only in test mode.
+- No test sleeps. What arrives later, like the webhook, gets polled for, up to a limit.
+- An integration takes 2 to 17 seconds on this machine.
+- The framework's own 166 tests run in under a second, with no PayRef and no Docker.
 
-## Cómo se puso a prueba
+## How it was put to the test
 
-Mientras se construyó, el framework se puso a prueba para verlo fallar. Se rompieron a propósito 55 piezas suyas, una a la vez, y cada una hizo fallar la prueba que le tocaba. También se rompió PayRef y se cambió lo esperado en los casos, para ver que cada falla dijera qué esperaba y qué llegó.
+While it was being built, the framework was put to the test to watch it fail. 55 of its pieces were broken on purpose, one at a time, and each one made the right test fail. PayRef got broken too, and the expected results in the cases were changed, to check that each failure said what it expected and what it got.
 
-El framework no sabe contra qué versión corre: la versión solo sirve para prender ese PayRef y ponerla en el reporte.
+The framework doesn't know which version it's running against. The version only decides which PayRef starts and what the report says.
 
-## Lista de bugs
+## Bug list
 
-La 1.0 de PayRef trae estos 8. Contra ella fallan 17 pruebas en el súper, 21 en el banco y 33 en la wallet, y contra la 1.1 no falla ninguna.
+PayRef 1.0 ships with these 8. Against it, 17 tests fail on the supermarket, 21 on the bank and 33 on the wallet. Against 1.1, none do.
 
-| El bug en la 1.0                                      | Lo atrapa                                           | Falla en                                 |
-| ----------------------------------------------------- | --------------------------------------------------- | ---------------------------------------- |
-| Un aviso repetido registra otro pago                  | F05-02, el aviso repetido de una recurrente         | La respuesta y la base                   |
-| Un monto con decimales de más se redondea y se acepta | F03-05, un decimal más de los que permite la región | La respuesta, y la base donde ya se pagó |
-| La referencia vence un día antes                      | F06-01 y F06-03, el último segundo de su día        | La respuesta                             |
-| Los errores traen el stacktrace                       | F11-05 y F10-07, lo que PayRef rechaza con un 400   | La respuesta                             |
-| Acepta un webhook con firma mala                      | F08-05, firmado con una llave que no conoce         | La respuesta y la base                   |
-| Un webhook tarde no revisa el vencimiento             | F08-01, el webhook de una referencia ya vencida     | La respuesta y la base                   |
-| El puente le dice a la wallet que aceptó un rechazo   | F08-02, cuando el framework manda el webhook        | La respuesta                             |
-| El banco reversa con la ventana ya cerrada            | F07-03, el reverso justo al cerrar                  | La respuesta y la base                   |
+| The bug in 1.0                                        | Caught by                                            | Fails in                                         |
+| ----------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------ |
+| A repeated notice registers another payment           | F05-02, the repeated notice on a recurring reference | The response and the database                    |
+| An amount with extra decimals is rounded and accepted | F03-05, one decimal more than the region allows      | The response, and the database where it got paid |
+| A reference expires a day early                       | F06-01 and F06-03, the last second of its day        | The response                                     |
+| Errors leak the stack trace                           | F11-05 and F10-07, what PayRef rejects with a 400    | The response                                     |
+| A webhook with a bad signature is accepted            | F08-05, signed with a key PayRef doesn't know        | The response and the database                    |
+| A late webhook doesn't check the expiry again         | F08-01, the webhook of an expired reference          | The response and the database                    |
+| The bridge tells the wallet a rejection was accepted  | F08-02, when the framework sends the webhook         | The response                                     |
+| The bank reverses a payment after its window closed   | F07-03, the reversal right as it closes              | The response and the database                    |
 
-## Cómo correrlo
+## How to run it
 
-Necesitas Node 24 (la versión está en `.nvmrc`) y Docker Desktop prendido.
+You need Node 24 (the version is in `.nvmrc`) and Docker Desktop running.
 
 ```bash
 nvm use
 npm install
-npm test           # corre contra el simulador sin bugs
-npm run test:bugs  # corre contra el simulador con bugs
+npm test           # runs against the simulator without bugs
+npm run test:bugs  # runs against the simulator with bugs
 ```
 
-No hay `.env` que copiar. La primera vez baja la imagen de MySQL y tarda más. Después, `npm test` prende la base si está apagada, corre las tres integraciones una tras otra, y prende y apaga PayRef y la wallet simulada. Antes del primer caso, una revisión rápida confirma que Docker, la base y los puertos estén bien. Si falta algo, la corrida no empieza y dice qué.
+There's no `.env` to copy. The first run downloads the MySQL image, so it takes longer. After that, `npm test` starts the database if it's down, runs the three integrations one after the other, and starts and stops PayRef and the simulated wallet. Before the first case, a quick check makes sure Docker, the database and the ports are fine. If something's missing, the run doesn't start and tells you what.
 
-| Comando                         | Qué hace                                                  |
-| ------------------------------- | --------------------------------------------------------- |
-| `npm test`                      | Corre las tres integraciones contra el simulador sin bugs |
-| `npm run test:bugs`             | Lo mismo contra el simulador con bugs                     |
-| `npm test -- bank`              | Corre solo una integración                                |
-| `npm test -- wallet --grep F08` | Corre solo algunos casos, con opciones de Playwright      |
-| `npm run report`                | Vuelve a escribir el reporte de la última corrida         |
-| `npm run verify`                | Formato, tipos, lint y las pruebas del framework          |
-| `npm run db:down`               | Apaga la base                                             |
+| Command                         | What it does                                                   |
+| ------------------------------- | -------------------------------------------------------------- |
+| `npm test`                      | Runs the three integrations against the simulator without bugs |
+| `npm run test:bugs`             | The same against the simulator with bugs                       |
+| `npm test -- bank`              | Runs one integration                                           |
+| `npm test -- wallet --grep F08` | Runs some cases, with Playwright options                       |
+| `npm run report`                | Writes the report of the last run again                        |
+| `npm run verify`                | Formatting, types, lint and the framework's tests              |
+| `npm run db:down`               | Stops the database                                             |
 
-## El reporte
+## The report
 
-Cada corrida deja su carpeta en `artifacts/runs/`, y la consola dice dónde quedó su reporte. Primero va el resumen: cuántas pruebas se aprueban, y cuántas salieron Correcto, Fallido, No concluido o No ejecutado. Después, cada caso se abre hasta sus pasos, sus revisiones de la base y las peticiones que viajaron.
+Every run gets its own folder in `artifacts/runs/`, and the console says where its report is. The summary comes first: how many tests are approved, and how many came out Passed, Failed, Inconclusive or Not run. Then each case opens down to its steps, its database checks and the requests that traveled.
 
-Son cuatro resultados porque dos no alcanzan. Fallido quiere decir que PayRef hizo otra cosa. No concluido, que no se pudo probar, como un timeout. No ejecutado trae su razón. Y un Correcto con la evidencia incompleta no se aprueba, porque una prueba en verde que nadie puede auditar no demuestra mucho.
+There are four results because two aren't enough. Failed means PayRef did something else. Inconclusive means it couldn't be tested, like a timeout. Not run comes with its reason. And a Passed with incomplete evidence isn't approved, because a green test nobody can audit doesn't prove much.
 
-## Lo que sigue
+## What's next
 
-- Un pipeline de CI con GitHub Actions.
-- Un set de pruebas de contrato para las APIs de PayRef, aparte de los casos de negocio.
-- Un adaptador: un payment method con contrato propio, detrás de otro puente.
-- Mandar los resultados a TestRail.
+- A CI pipeline with GitHub Actions.
+- A contract test set for PayRef's APIs, apart from the business cases.
+- An adapter: a payment method with a contract of its own, behind a second bridge.
+- Sending the results to TestRail.
 
 ## Docs
 
-- [Requerimientos](docs/requirements.md)
-- [Análisis de pruebas](docs/test-analysis.md)
-- [Matriz de casos](docs/test-matrix.md)
-- [Cómo agregar una integración o un caso](docs/adding-an-integration.md)
-- [Resumen de cada fase](docs/phase-summaries.md)
+- [Requirements](docs/requirements.md)
+- [Test analysis](docs/test-analysis.md)
+- [Case matrix](docs/test-matrix.md)
+- [Framework tests](docs/framework-tests.md)
+- [How to add an integration or a case](docs/adding-an-integration.md)
+
+## Resumen
+
+Un framework para automatizar las pruebas de un orquestador de pagos. El pago se programa una sola vez, y cada forma de pagar nada más dice qué usa, así que un súper, un banco y una wallet comparten una misma base de casos. Prueba PayRef, un simulador que vive en este repo, con una versión bien y otra con 8 bugs. Para correrlo necesitas Node 24 y Docker Desktop prendido, y estos comandos: `nvm use`, `npm install` y `npm test`. Con `npm run test:bugs` corre contra el simulador con bugs.

@@ -16,7 +16,7 @@ export type ThirdPartyApi = {
 };
 
 // The simulator of a third party, for the tests where it sends its own webhook: the framework
-// only tells it that the customer paid, and how much (HU-12).
+// only tells it that the customer paid, and how much (US-12).
 export type ThirdPartySimulator = {
   pay(
     resource: string,

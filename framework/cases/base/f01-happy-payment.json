@@ -10,6 +10,6 @@
     },
     "objective": { "step": "notice", "expect": "OK" },
     "checks": ["reference-state"],
-    "tags": ["smoke", "hu-01", "hu-08"]
+    "tags": ["smoke", "us-01", "us-08"]
   }
 ]

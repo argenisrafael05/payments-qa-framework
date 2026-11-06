@@ -1,6 +1,6 @@
 // The look of the report, approved on a simulation with the data of a real run: the dark
 // background and the one orange of the portfolio site, the summary first and every test open
-// down to its evidence (HU-05).
+// down to its evidence (US-05).
 
 export const reportStyles = `
 :root {

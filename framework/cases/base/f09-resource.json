@@ -10,7 +10,7 @@
     "from": "created",
     "objective": { "step": "request", "expect": "OK" },
     "checks": ["same-resource"],
-    "tags": ["hu-11"]
+    "tags": ["us-11"]
   },
   {
     "id": "F09-02",
@@ -27,6 +27,6 @@
       "caller": "other-amount"
     },
     "checks": ["another-resource"],
-    "tags": ["hu-11"]
+    "tags": ["us-11"]
   }
 ]

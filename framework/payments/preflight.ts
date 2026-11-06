@@ -5,7 +5,7 @@ import type { Environment } from "./environment.ts";
 import { loadIntegration } from "./integrations.ts";
 import { currentRun, type RunSetup } from "./run-setup.ts";
 
-// The quick check before each run (RE-17, RNF-11). Each check passes quietly, or throws
+// The quick check before each run (US-06, NFR-11). Each check passes quietly, or throws
 // saying what is missing and what to do, so a run never starts half ready.
 
 export function checkConfig(id: string): void {
@@ -24,7 +24,7 @@ export async function checkDatabase(
   await connection.end();
 }
 
-// The framework only reads (RNF-11). It tries three writes that touch no rows, so nothing
+// The framework only reads (NFR-11). It tries three writes that touch no rows, so nothing
 // changes even if the user could write, and each one has to be denied.
 const harmlessWrites = [
   "UPDATE movements SET status = status WHERE 1 = 0",

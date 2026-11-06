@@ -11,7 +11,7 @@
     "after": "before-window-end",
     "objective": { "step": "notice", "expect": "OK" },
     "checks": ["reference-state"],
-    "tags": ["hu-10"]
+    "tags": ["us-10"]
   },
   {
     "id": "F07-02",
@@ -25,7 +25,7 @@
     "after": "before-window-end",
     "objective": { "step": "reversal", "expect": "OK" },
     "checks": ["reference-state"],
-    "tags": ["hu-10"]
+    "tags": ["us-10"]
   },
   {
     "id": "F07-03",
@@ -38,7 +38,7 @@
     "from": "pending",
     "after": "window-end",
     "objective": { "step": "reversal", "expect": "R-107" },
-    "tags": ["hu-10"]
+    "tags": ["us-10"]
   },
   {
     "id": "F07-04",
@@ -52,7 +52,7 @@
     "after": "window-end",
     "objective": { "step": "view", "expect": "OK" },
     "checks": ["reference-state"],
-    "tags": ["hu-10"]
+    "tags": ["us-10"]
   },
   {
     "id": "F07-05",
@@ -65,7 +65,7 @@
     "from": "pending",
     "after": "before-window-end",
     "objective": { "step": "request", "expect": "R-108" },
-    "tags": ["hu-10"]
+    "tags": ["us-10"]
   },
   {
     "id": "F07-06",
@@ -78,7 +78,7 @@
     "from": "pending",
     "objective": { "step": "cancel", "expect": "R-108" },
     "checks": ["reference-state"],
-    "tags": ["hu-10", "hu-07"]
+    "tags": ["us-10", "us-07"]
   },
   {
     "id": "F07-07",
@@ -93,7 +93,7 @@
     "from": "pending",
     "after": "before-window-end",
     "objective": { "step": "notice", "expect": "OK" },
-    "tags": ["hu-10"],
+    "tags": ["us-10"],
     "notes": "The request goes at 23:59:59 of the last day, and the notice a second before the window ends, with the reference already expired."
   },
   {
@@ -106,7 +106,7 @@
     },
     "from": "confirmed",
     "objective": { "step": "notice", "expect": "R-102" },
-    "tags": ["hu-10"]
+    "tags": ["us-10"]
   },
   {
     "id": "F07-09",
@@ -118,7 +118,7 @@
     },
     "from": "confirmed",
     "objective": { "step": "notice", "expect": "R-106" },
-    "tags": ["hu-10"]
+    "tags": ["us-10"]
   },
   {
     "id": "F07-10",
@@ -130,7 +130,7 @@
     },
     "from": ["confirmed", "reversed"],
     "objective": { "step": "reversal", "expect": "R-107" },
-    "tags": ["hu-10"]
+    "tags": ["us-10"]
   },
   {
     "id": "F07-11",
@@ -142,7 +142,7 @@
     },
     "from": "reversed",
     "objective": { "step": "notice", "expect": "R-107" },
-    "tags": ["hu-10"]
+    "tags": ["us-10"]
   },
   {
     "id": "F07-12",
@@ -154,6 +154,6 @@
     },
     "from": "reversed",
     "objective": { "step": "request", "expect": "OK" },
-    "tags": ["hu-10"]
+    "tags": ["us-10"]
   }
 ]

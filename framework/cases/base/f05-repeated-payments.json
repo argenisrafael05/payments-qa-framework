@@ -6,7 +6,7 @@
     "reference": { "type": "single", "amountType": "fixed" },
     "secondSequence": ["same", "new"],
     "objective": { "step": "second-payment", "expect": "R-102" },
-    "tags": ["hu-02", "hu-09"]
+    "tags": ["us-02", "us-09"]
   },
   {
     "id": "F05-02",
@@ -15,7 +15,7 @@
     "reference": { "type": "recurring", "amountType": "fixed" },
     "secondSequence": "same",
     "objective": { "step": "second-payment", "expect": "R-106" },
-    "tags": ["hu-02", "hu-09"]
+    "tags": ["us-02", "us-09"]
   },
   {
     "id": "F05-03",
@@ -25,6 +25,6 @@
     "secondSequence": "new",
     "objective": { "step": "second-payment", "expect": "OK" },
     "checks": ["reference-state"],
-    "tags": ["hu-02", "hu-09"]
+    "tags": ["us-02", "us-09"]
   }
 ]

@@ -6,7 +6,7 @@ import { z } from "zod";
 const root = fileURLToPath(new URL("../../", import.meta.url));
 
 // Cases and configs are data, validated when they load, so a typo fails before anything runs
-// and the message says which file and which field (HU-03).
+// and the message says which file and which field (US-03).
 export function loadData<T>(file: URL, schema: z.ZodType<T>): T {
   const name = relative(root, fileURLToPath(file));
   let raw: unknown;

@@ -18,7 +18,7 @@ import { regions } from "./regions.ts";
 
 const baseCatalog = new URL("../cases/base/", import.meta.url);
 
-// The amounts a case writes by what they are, so it runs in any region (HU-03): each one
+// The amounts a case writes by what they are, so it runs in any region (US-03): each one
 // becomes the number of its integration.
 export const amountNames = [
   "min",
@@ -33,7 +33,7 @@ export const amountNames = [
 // The lengths of a code, around the one of its region, and the one of the other region.
 export const codeLengths = ["short", "exact", "long", "other-region"] as const;
 
-// An axis of the reference takes one value, or a list that makes one test per value (HU-03).
+// An axis of the reference takes one value, or a list that makes one test per value (US-03).
 function axis<T extends z.ZodType>(value: T) {
   return z.union([value, z.array(value).min(1)]);
 }
@@ -80,7 +80,7 @@ const caseSchema = z.strictObject({
       amountType: axis(z.enum(["fixed", "open"])),
       expiresOn: axis(z.iso.date().nullable()).optional(),
       // Only when a fixed reference must be worth something else than what is paid, or null to
-      // send a fixed one without its amount, a mistake of the merchant (HU-07).
+      // send a fixed one without its amount, a mistake of the merchant (US-07).
       amount: z.number().nullable().optional(),
     })
     .optional(),
@@ -142,7 +142,7 @@ export type CaseEntry = {
   reference?: Reference;
   // The code of the unknown reference, which nobody created.
   code?: string;
-  // Why the case does not apply to this integration, when it does not (HU-03).
+  // Why the case does not apply to this integration, when it does not (US-03).
   notApplicable?: string;
   amount: number;
   secondSequence?: "same" | "new";
@@ -262,7 +262,7 @@ export function casesFor(
 }
 
 // A case that ends at a notice of a third party runs with both sources of its webhook, the
-// framework and the third party itself (HU-12). One that ends before it has no webhook to send.
+// framework and the third party itself (US-12). One that ends before it has no webhook to send.
 function sourcesOf(
   item: Case,
   integration: Integration,
@@ -329,7 +329,7 @@ function applies(item: Case, integration: Integration): string | undefined {
   if (resourceOnly && integration.notice !== "webhook") {
     return `${integration.name} has no payment resource, so the case does not apply`;
   }
-  // A third party has no token of its own: it signs (HU-11). A case that needs the token of its
+  // A third party has no token of its own: it signs (US-11). A case that needs the token of its
   // payment method, the other role or the 403 of an operation it does not have, does not apply.
   const needsItsToken =
     item.objective.caller === "other-role" ||
@@ -337,7 +337,7 @@ function applies(item: Case, integration: Integration): string | undefined {
   if (integration.notice === "webhook" && needsItsToken) {
     return `${integration.name} has no token of its own, it signs, so the case does not apply`;
   }
-  // The payment of a bank in its window, and its reversal, come with the window (HU-10).
+  // The payment of a bank in its window, and its reversal, come with the window (US-10).
   const withoutWindow =
     (step === "reversal" || list(item.from ?? []).some(isPaymentState)) &&
     integration.reversalWindow === undefined;
@@ -428,7 +428,7 @@ function amountOf(
 
 // A code nobody created, of the length the case asks for in its region. Each region keeps
 // everything in its own database, so a code of the other region does not exist here either
-// (HU-09). PayRef has two regions, so the other one is the one that is not its own.
+// (US-09). PayRef has two regions, so the other one is the one that is not its own.
 function codeOf(given: string, integration: Integration): string {
   const length = regions[integration.region].referenceLength;
   switch (given) {

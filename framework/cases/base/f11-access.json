@@ -12,7 +12,7 @@
       "expect": 401,
       "caller": "no-token"
     },
-    "tags": ["hu-09"]
+    "tags": ["us-09"]
   },
   {
     "id": "F11-02",
@@ -24,7 +24,7 @@
       "expect": 401,
       "caller": "invalid-token"
     },
-    "tags": ["hu-09"],
+    "tags": ["us-09"],
     "notes": "If PayRef looked for the reference first, it would tell anyone without credentials which references exist."
   },
   {
@@ -40,7 +40,7 @@
       "expect": 401,
       "caller": "wrong-key"
     },
-    "tags": ["hu-09"]
+    "tags": ["us-09"]
   },
   {
     "id": "F11-04",
@@ -55,7 +55,7 @@
       "expect": 403,
       "caller": "other-role"
     },
-    "tags": ["hu-09"]
+    "tags": ["us-09"]
   },
   {
     "id": "F11-05",
@@ -70,7 +70,7 @@
       "expect": 400,
       "caller": "malformed-request"
     },
-    "tags": ["hu-02", "hu-09"]
+    "tags": ["us-02", "us-09"]
   },
   {
     "id": "F11-06",
@@ -85,6 +85,6 @@
       "step": "reversal",
       "expect": 403
     },
-    "tags": ["hu-08", "hu-09"]
+    "tags": ["us-08", "us-09"]
   }
 ]

@@ -12,7 +12,7 @@ import {
 export type Step<C> = {
   name: string;
   title: string;
-  // It executes a call, or it observes in the database what someone else did (HU-01).
+  // It executes a call, or it observes in the database what someone else did (US-01).
   kind: "executes" | "observes";
   // The business steps it carries out, as a case names them in its objective.
   covers: readonly string[];
@@ -53,7 +53,7 @@ const success: Expectation = { kind: "success" };
 
 // Runs a case to its objective (3.1). The steps before it only have to succeed, and the case
 // stops at the first problem. The extra checks come after, and the final check of the
-// database always runs, once (HU-01).
+// database always runs, once (US-01).
 export async function runCase<C>(
   plan: CasePlan<C>,
   context: C,
@@ -81,7 +81,7 @@ export async function runCase<C>(
       }
       recorder.endStep(verdict);
       // A step keeps only what the case expected. A payment the API confirmed where the case
-      // expected a rejection does not count, so the final check finds it too (HU-01).
+      // expected a rejection does not count, so the final check finds it too (US-01).
       if (
         verdict.succeeded &&
         verdict.body !== undefined &&
@@ -99,7 +99,7 @@ export async function runCase<C>(
     }
   }
 
-  // After a problem the extra checks do not run: they are not a diagnosis (HU-01).
+  // After a problem the extra checks do not run: they are not a diagnosis (US-01).
   for (const [index, check] of plan.checks.entries()) {
     if (stopped || recorder.finished) {
       break;

@@ -44,7 +44,7 @@ export function paymentFlow(integration: Integration): readonly PaymentStep[] {
 }
 
 // Who sends the webhook of a third party: the framework, signed as the third party would, or the
-// third party itself (HU-12).
+// third party itself (US-12).
 export type NoticeSource = "framework" | "third-party";
 
 export type FlowName =

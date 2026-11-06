@@ -5,7 +5,7 @@ import { currentRun } from "./framework/payments/run-setup.ts";
 loadEnvFiles();
 const run = currentRun();
 
-// One integration per run, with one worker, and Playwright never retries a case (HU-01, 3.1).
+// One integration per run, with one worker, and Playwright never retries a case (US-01, 3.1).
 export default defineConfig({
   testDir: "tests/specs",
   fullyParallel: false,
@@ -14,7 +14,7 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   timeout: 60_000,
-  // The last line of the quick check, once PayRef is up (RE-17).
+  // The last line of the quick check, once PayRef is up (US-06).
   globalSetup: "./tests/global-setup.ts",
   outputDir: `${run.directory}/playwright-output`,
   reporter: [

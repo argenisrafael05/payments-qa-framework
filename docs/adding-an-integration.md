@@ -1,19 +1,19 @@
-# Cómo agregar una integración o un caso
+# How to add an integration or a case
 
-## Una integración
+## An integration
 
-Es config de los dos lados, el de PayRef y el del framework. Esto es para una integración con el contrato estándar. Una con contrato propio, como la wallet, además trae su cliente y su traducción.
+It's config on both sides, PayRef's and the framework's. This is for an integration on the standard contract. One with a contract of its own, like the wallet, also brings its client and its translation.
 
-1. Agrega su payment method a la config de su región en PayRef, `payref/config/mx.json` o `payref/config/sa.json`: su id, su nombre, `"kind": "standard"`, la variable que guarda su llave, las operaciones que puede usar y sus topes de monto. Si se parece al banco, también puede prender `"reversalWindow": { "minutes": 2 }`.
-2. Agrega su llave a `.env.example`.
-3. Crea `framework/integrations/<id>/integration.json`. Copia el de la integración que más se le parezca y cambia lo que sea distinto. Si PayRef le prende la ventana, agrega la misma aquí.
-4. Corre `npm test -- <id>`.
+1. Add its payment method to the config of its region in PayRef, `payref/config/mx.json` or `payref/config/sa.json`: its id, its name, `"kind": "standard"`, the variable that holds its key, the operations it can use and its amount limits. A bank-like one can also turn on `"reversalWindow": { "minutes": 2 }`.
+2. Add its key to `.env.example`.
+3. Create `framework/integrations/<id>/integration.json`. Copy the one from the integration that looks most like yours and change what's different. If PayRef turns on its window, add the same one here.
+4. Run `npm test -- <id>`.
 
-El catálogo completo corre en ella de una vez, y lo que no le aplica sale como No ejecutado, con su razón.
+The whole catalog runs on it right away, and what doesn't apply shows up as Not run, with its reason.
 
-## Un caso
+## A case
 
-Agrégalo a su familia en `framework/cases/base/`. Por ejemplo, una referencia única de monto fijo, pagada con el monto normal de su región:
+Add it to its family in `framework/cases/base/`. For example, a fixed single reference paid with the usual amount of its region:
 
 ```json
 {
@@ -22,8 +22,8 @@ Agrégalo a su familia en `framework/cases/base/`. Por ejemplo, una referencia �
   "flow": "payment",
   "reference": { "type": "single", "amountType": "fixed" },
   "objective": { "step": "notice", "expect": "OK" },
-  "tags": ["hu-01"]
+  "tags": ["us-01"]
 }
 ```
 
-Después agrega su fila a [la matriz de casos](test-matrix.md). Las pruebas del framework revisan que cada caso tenga su fila, con las mismas historias que sus tags.
+Then add its row to [the case matrix](test-matrix.md). The framework's tests check that every case has its row, with the same stories as its tags.

@@ -7,7 +7,7 @@ import {
 import { loadIntegration } from "../../framework/payments/integrations.ts";
 
 // The time each step runs at: the one of the case, except the creation of a reference that is
-// already expired then, which is not created with a past date (HU-07).
+// already expired then, which is not created with a past date (US-07).
 
 const expired = {
   id: "F99-01",

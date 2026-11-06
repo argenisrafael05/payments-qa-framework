@@ -9,7 +9,7 @@ import {
 } from "../../framework/payments/preflight.ts";
 
 // The parts of the quick check that need no database. The read-only user is checked against
-// the real one in every run, because these tests run without Docker (RE-42).
+// the real one in every run, because these tests run without Docker (NFR-11).
 
 const run = {
   integration: loadIntegration("supermarket"),

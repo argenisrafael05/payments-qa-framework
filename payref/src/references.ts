@@ -121,8 +121,8 @@ export function registerReferences(
   );
 
   // Only an active reference is cancelled. One that no longer is answers its own code, in the
-  // order of 8.4: cancelled, expired, and a single that is paid (HU-07). While the reversal
-  // window of a payment runs, it is not cancelled either (HU-10).
+  // order of 8.4: cancelled, expired, and a single that is paid (US-07). While the reversal
+  // window of a payment runs, it is not cancelled either (US-10).
   app.post<{ Params: ReferenceParams }>(
     "/references/:reference/cancellation",
     { schema: cancelReferenceSchema, onRequest: auth.allow("merchant") },

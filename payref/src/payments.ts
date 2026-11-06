@@ -66,7 +66,7 @@ export function registerPayments(
   app: FastifyInstance,
   { db, region, auth, bugs }: Dependencies,
 ): void {
-  // The inquiry only informs, and it never registers anything (HU-08). It tells the payment
+  // The inquiry only informs, and it never registers anything (US-08). It tells the payment
   // method everything about the reference, its state too, but it validates nothing: the payment
   // always does, whether there was an inquiry or not. Only a reference that does not exist has
   // nothing to tell.
@@ -132,7 +132,7 @@ export function registerPayments(
 
   // The request alone, for a payment method that validates before it charges. It validates like
   // the payment in one call, and the payment stays pending until its notice: the reversal window
-  // opens here, when its payment method has one (HU-10).
+  // opens here, when its payment method has one (US-10).
   app.post<{ Body: PaymentBody }>(
     "/payment-requests",
     {
@@ -164,7 +164,7 @@ export function registerPayments(
   );
 
   // The notice confirms the pending payment of its request. It does not validate again: the
-  // customer paid while the reference applied (HU-10). A second notice of a confirmed payment,
+  // customer paid while the reference applied (US-10). A second notice of a confirmed payment,
   // also one its window already confirmed, is a repeated notice, or R-102 on a single
   // reference, and the notice of a reversed one comes after its window closed (8.7).
   app.post<{ Body: PaymentNoticeBody }>(
@@ -194,7 +194,7 @@ export function registerPayments(
         return rejections.windowClosed;
       }
       // Without the window, the notice validates again, because in between the reference could
-      // be cancelled, expire or get paid (HU-08). With it, the payment is protected (HU-10).
+      // be cancelled, expire or get paid (US-08). With it, the payment is protected (US-10).
       if (!hasWindow(region, caller.id)) {
         const rejection = await validateAgain(movement.referenceCode, now);
         if (rejection) {
@@ -287,7 +287,7 @@ export function registerPayments(
 }
 
 // The rules every payment goes through, shared by the routes of the payment methods and by the
-// bridge of the wallet, which reuses the standard request and notice (HU-11).
+// bridge of the wallet, which reuses the standard request and notice (US-11).
 export function paymentRules({ db, region, bugs }: Omit<Dependencies, "auth">) {
   // What every payment goes through, in the order of 8.4: in one call, in its request, or in what
   // the bridge of the wallet asks for. A request for a payment resource brings no sequence yet.
@@ -333,7 +333,7 @@ export function paymentRules({ db, region, bugs }: Omit<Dependencies, "auth">) {
       return { rejection: rejections.alreadyPaid };
     }
     // While the window of another payment runs, the reference takes no other request, single or
-    // recurring (HU-10).
+    // recurring (US-10).
     if (await hasPaymentInWindow(db, region, reference.code)) {
       return { rejection: rejections.paymentInProgress };
     }

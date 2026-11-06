@@ -3,7 +3,7 @@ import type { JsonObject } from "./http.ts";
 import { describe, type Expectation, type Verdict } from "./judge.ts";
 
 // What a step that observes saw in the database: the code that someone else's action left there,
-// read once it showed up, or nothing when it never did in time (HU-12).
+// read once it showed up, or nothing when it never did in time (US-12).
 export type Observation = {
   kind: "observation";
   readings: ReadingRecord[];

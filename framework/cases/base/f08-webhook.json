@@ -1,7 +1,7 @@
 [
   {
     "id": "F08-01",
-    "title": "A late webhook of a reference that expired after its resource is rejected",
+    "title": "A late webhook for a reference that expired after its resource is rejected",
     "flow": "transition",
     "reference": {
       "type": ["single", "recurring"],
@@ -11,11 +11,11 @@
     "time": "2026-11-20T12:00:00",
     "from": "expired",
     "objective": { "step": "notice", "expect": "R-103" },
-    "tags": ["hu-11", "hu-12"]
+    "tags": ["us-11", "us-12"]
   },
   {
     "id": "F08-02",
-    "title": "A late webhook of a reference cancelled after its resource is rejected",
+    "title": "A late webhook for a reference cancelled after its resource is rejected",
     "flow": "transition",
     "reference": {
       "type": ["single", "recurring"],
@@ -23,11 +23,11 @@
     },
     "from": "cancelled",
     "objective": { "step": "notice", "expect": "R-105" },
-    "tags": ["hu-11", "hu-12"]
+    "tags": ["us-11", "us-12"]
   },
   {
     "id": "F08-03",
-    "title": "A webhook with another amount than its resource is rejected",
+    "title": "A webhook with a different amount than its resource is rejected",
     "flow": "payment",
     "reference": {
       "type": "single",
@@ -38,7 +38,7 @@
       "expect": "R-104",
       "caller": "other-amount"
     },
-    "tags": ["hu-11", "hu-12"]
+    "tags": ["us-11", "us-12"]
   },
   {
     "id": "F08-04",
@@ -53,7 +53,7 @@
       "expect": 401,
       "caller": "unsigned"
     },
-    "tags": ["hu-09", "hu-11"]
+    "tags": ["us-09", "us-11"]
   },
   {
     "id": "F08-05",
@@ -68,11 +68,11 @@
       "expect": 401,
       "caller": "bad-signature"
     },
-    "tags": ["hu-09", "hu-11"]
+    "tags": ["us-09", "us-11"]
   },
   {
     "id": "F08-06",
-    "title": "A webhook of a resource nobody created is not applied",
+    "title": "A webhook for a resource nobody created is not applied",
     "flow": "payment",
     "reference": {
       "type": "single",
@@ -83,6 +83,6 @@
       "expect": "R-101",
       "caller": "unknown-resource"
     },
-    "tags": ["hu-11"]
+    "tags": ["us-11"]
   }
 ]

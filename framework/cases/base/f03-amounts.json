@@ -10,11 +10,11 @@
     },
     "amount": ["below-fixed", "above-fixed"],
     "objective": { "step": "request", "expect": "R-104" },
-    "tags": ["hu-02", "hu-08"]
+    "tags": ["us-02", "us-08"]
   },
   {
     "id": "F03-02",
-    "title": "An open reference takes the limits of the payment method",
+    "title": "An open reference accepts the limits of the payment method",
     "flow": "payment",
     "reference": {
       "type": ["single", "recurring"],
@@ -23,7 +23,7 @@
     },
     "amount": ["min", "max"],
     "objective": { "step": "notice", "expect": "OK" },
-    "tags": ["hu-02", "hu-08"]
+    "tags": ["us-02", "us-08"]
   },
   {
     "id": "F03-03",
@@ -36,7 +36,7 @@
     },
     "amount": ["below-min", "above-max", 10000000000000],
     "objective": { "step": "request", "expect": "R-104" },
-    "tags": ["hu-02", "hu-08"]
+    "tags": ["us-02", "us-08"]
   },
   {
     "id": "F03-04",
@@ -49,11 +49,11 @@
     },
     "amount": [0, -1],
     "objective": { "step": "request", "expect": "R-104" },
-    "tags": ["hu-02", "hu-08"]
+    "tags": ["us-02", "us-08"]
   },
   {
     "id": "F03-05",
-    "title": "An amount with more decimals than its region is rejected, never rounded",
+    "title": "An amount with more decimals than its region allows is rejected, never rounded",
     "flow": "payment",
     "reference": {
       "type": ["single", "recurring"],
@@ -62,6 +62,6 @@
     },
     "amount": ["extra-decimal"],
     "objective": { "step": "request", "expect": "R-104" },
-    "tags": ["hu-02", "hu-08"]
+    "tags": ["us-02", "us-08"]
   }
 ]

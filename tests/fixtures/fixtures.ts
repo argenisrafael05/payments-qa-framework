@@ -45,7 +45,7 @@ export const test = base.extend<{ cases: Cases }, { run: RunSetup; db: Pool }>({
       },
     });
     // A case that ran out of time, or whose run was interrupted, is closed here, with its
-    // last check of the database (HU-01).
+    // last check of the database (US-01).
     if (execution !== undefined && !execution.finished) {
       await execution.close(
         testInfo.status === "timedOut"

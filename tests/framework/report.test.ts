@@ -12,7 +12,7 @@ import {
 } from "../../framework/engine/run-files.ts";
 import { temporaryDirectory } from "./builders.ts";
 
-// The report of a run, from controlled files (HU-05): it shows what the run saved, nothing more.
+// The report of a run, from controlled files (US-05): it shows what the run saved, nothing more.
 
 const run: RunRecord = {
   id: "2026-11-01_21-41-10_wallet_mx_local_1.0",

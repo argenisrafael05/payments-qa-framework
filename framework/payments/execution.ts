@@ -221,7 +221,7 @@ function arrivingAfter(
 
 // Every step runs at the time of the case, but a reference that is already expired then was
 // created the day before it expires, at 00:00, while it was still valid, because a past date is
-// not created (HU-07). The day before, so a bug that expires it a day early never hides another
+// not created (US-07). The day before, so a bug that expires it a day early never hides another
 // one. The day of the case is the one written in its time, which is the time of its region. A
 // case that tests the creation itself keeps its time.
 export function creationTimeOf(

@@ -13,7 +13,7 @@ export const inquiry: PaymentStep = {
   title: "The payment method inquires the reference",
   kind: "executes",
   covers: ["inquiry"],
-  // The inquiry only informs and never cuts the flow (HU-08): it answers OK with the data of
+  // The inquiry only informs and never cuts the flow (US-08): it answers OK with the data of
   // the reference, whatever its state, and only one that does not exist gets R-101. The payment
   // after it always validates on its own.
   expects: (next) =>
