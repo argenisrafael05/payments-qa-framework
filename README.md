@@ -171,6 +171,8 @@ There's no `.env` to copy. The first run downloads the MySQL image, so it takes 
 
 Every run gets its own folder in `artifacts/runs/`, and the console says where its report is. The summary comes first: how many tests are approved, and how many came out Passed, Failed, Inconclusive or Not run. Then each case opens down to its steps, its database checks and the requests that traveled.
 
+Here's [a sample report](https://argenisrafael05.github.io/payments-qa-framework/), from a run of the wallet against the simulator with bugs.
+
 There are four results because two aren't enough. Failed means PayRef did something else. Inconclusive means it couldn't be tested, like a timeout. Not run comes with its reason. And a Passed with incomplete evidence isn't approved, because a green test nobody can audit doesn't prove much.
 
 ## What's next
