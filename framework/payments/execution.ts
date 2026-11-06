@@ -54,13 +54,8 @@ export function executeCase(options: {
     case: entry.case,
   });
 
-  const notRun =
-    entry.notApplicable ??
-    (entry.case.blocked === undefined
-      ? undefined
-      : `blocked: ${entry.case.blocked}`);
-  if (notRun !== undefined) {
-    const record = recorder.notRun(notRun);
+  if (entry.notApplicable !== undefined) {
+    const record = recorder.notRun(entry.notApplicable);
     return {
       done: Promise.resolve(record),
       finished: true,

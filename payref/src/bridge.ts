@@ -274,7 +274,7 @@ async function createResource(
   return { id: answer.id, qr: answer.qr, link: answer.link };
 }
 
-export function signatureOf(key: string, body: string): string {
+function signatureOf(key: string, body: string): string {
   return `sha256=${createHmac("sha256", key).update(body).digest("hex")}`;
 }
 
