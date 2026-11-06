@@ -5,7 +5,7 @@ import { callerOf, type Auth } from "./auth.ts";
 import type { PaymentMethodConfig, RegionConfig } from "./config.ts";
 import { rejections } from "./errors.ts";
 import { nowOf } from "./clock.ts";
-import { checkAmount, checkExpiry } from "./rules.ts";
+import { checkAmount, checkExpiry, stateOf } from "./rules.ts";
 import {
   inquirySchema,
   paymentNoticeSchema,
@@ -74,10 +74,11 @@ export function registerPayments(
     "/inquiries/:reference",
     {
       schema: inquirySchema,
-      preHandler: auth.allow("paymentMethod", "inquiry"),
+      onRequest: auth.allow("paymentMethod", "inquiry"),
     },
     async (request) => {
-      await settleWindows(db, region, request.params.reference, nowOf(request));
+      const now = nowOf(request);
+      await settleWindows(db, region, request.params.reference, now);
       const reference = await findReference(db, request.params.reference);
       if (!reference) {
         return rejections.notFound;
@@ -86,7 +87,7 @@ export function registerPayments(
         code: "OK",
         message: "The reference was found",
         reference: reference.code,
-        status: reference.status,
+        status: stateOf(reference, now, region, bugs),
         type: reference.type,
         amountType: reference.amountType,
         amount: reference.amount ?? undefined,
@@ -103,7 +104,7 @@ export function registerPayments(
     "/payments",
     {
       schema: paymentSchema,
-      preHandler: auth.allow("paymentMethod", "payment"),
+      onRequest: auth.allow("paymentMethod", "payment"),
     },
     async (request) => {
       const caller = callerOf(request);
@@ -129,14 +130,14 @@ export function registerPayments(
     },
   );
 
-  // The request alone, like a bank that validates before it charges. It validates like the
-  // payment in one call, and the payment stays pending until its notice: the reversal window
-  // of the bank opens here (HU-10).
+  // The request alone, for a payment method that validates before it charges. It validates like
+  // the payment in one call, and the payment stays pending until its notice: the reversal window
+  // opens here, when its payment method has one (HU-10).
   app.post<{ Body: PaymentBody }>(
     "/payment-requests",
     {
       schema: paymentSchema,
-      preHandler: auth.allow("paymentMethod", "request"),
+      onRequest: auth.allow("paymentMethod", "request"),
     },
     async (request) => {
       const caller = callerOf(request);
@@ -170,7 +171,7 @@ export function registerPayments(
     "/payment-notices",
     {
       schema: paymentNoticeSchema,
-      preHandler: auth.allow("paymentMethod", "notice"),
+      onRequest: auth.allow("paymentMethod", "notice"),
     },
     async (request) => {
       const caller = callerOf(request);
@@ -217,7 +218,7 @@ export function registerPayments(
     "/reversals",
     {
       schema: reversalSchema,
-      preHandler: auth.allow("paymentMethod", "reversal"),
+      onRequest: auth.allow("paymentMethod", "reversal"),
     },
     async (request) => {
       const caller = callerOf(request);

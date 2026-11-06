@@ -9,7 +9,12 @@ const referenceCode = {
   pattern: "^[0-9]+$",
   maxLength: 30,
 } as const;
-const amount = { type: "number", exclusiveMinimum: 0 } as const;
+// The largest one the database keeps: DECIMAL(12, 2).
+const amount = {
+  type: "number",
+  exclusiveMinimum: 0,
+  maximum: 9999999999.99,
+} as const;
 const referenceType = {
   type: "string",
   enum: ["single", "recurring"],
@@ -148,7 +153,10 @@ export const inquirySchema = {
   },
   response: responses({
     reference: referenceCode,
-    status: { type: "string", enum: ["active", "paid", "cancelled"] },
+    status: {
+      type: "string",
+      enum: ["active", "paid", "cancelled", "expired"],
+    },
     type: referenceType,
     amountType: amountTypes,
     amount,

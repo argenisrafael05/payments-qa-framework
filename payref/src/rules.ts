@@ -25,6 +25,20 @@ export function checkExpiry(
   return expired ? rejections.expired : undefined;
 }
 
+// The state a reference reports (8.6). Expired is not kept: it comes from its date and the time
+// of its region.
+export function stateOf(
+  reference: { status: string; expiresOn: string | null },
+  now: Date,
+  region: RegionConfig,
+  bugs: ReadonlySet<number>,
+): string {
+  const expired =
+    reference.status === "active" &&
+    checkExpiry(reference.expiresOn, now, region, bugs) !== undefined;
+  return expired ? "expired" : reference.status;
+}
+
 // The amount of a payment (HU-08). Whatever makes it invalid, the answer is R-104, and it is
 // never rounded: zero or negative, more decimals than its region, other than the fixed amount,
 // or outside the limits of the payment method for an open reference.

@@ -77,10 +77,11 @@ export function registerWalletBridge(
 
   // The merchant asks for the resource of its own reference. It is the request: PayRef
   // validates it like a standard one, and only then asks the wallet for a QR or a link. The
-  // resource is for one payment: while it is not paid, asking again gives the same one (8.8).
+  // resource is for one payment of one amount: while it is not paid, asking again for that amount
+  // gives the same one, and another amount gets a new one (8.8).
   app.post<{ Body: PaymentResourceBody }>(
     "/wallet/payment-resources",
-    { schema: paymentResourceSchema, preHandler: auth.allow("merchant") },
+    { schema: paymentResourceSchema, onRequest: auth.allow("merchant") },
     async (request) => {
       const now = nowOf(request);
       const { reference: code, amount } = request.body;
@@ -101,7 +102,7 @@ export function registerWalletBridge(
         return validated.rejection;
       }
       const created =
-        (await unpaidResourceOf(db, code)) ??
+        (await unpaidResourceOf(db, code, validated.amount)) ??
         (await createResource(walletUrl, key, {
           reference: code,
           amount: validated.amount,
@@ -127,7 +128,8 @@ export function registerWalletBridge(
   );
 
   // The webhook is the notice. It comes signed with the key of the wallet over the exact bytes it
-  // sends, so its body is kept as it arrived to check the signature.
+  // sends, so its body is kept as it arrived. The signature is its credential and goes first (8.4),
+  // so a body that is not JSON waits for the validation, after it.
   app.register(async (webhooks) => {
     webhooks.decorateRequest("rawBody", "");
     webhooks.addContentTypeParser(
@@ -137,21 +139,25 @@ export function registerWalletBridge(
         request.rawBody = String(body);
         try {
           done(null, JSON.parse(String(body)));
-        } catch (error) {
-          done(Object.assign(error as Error, { statusCode: 400 }), undefined);
+        } catch {
+          done(null, undefined);
         }
       },
     );
 
     webhooks.post<{ Body: WalletWebhookBody }>(
       "/wallet/webhooks",
-      { schema: walletWebhookSchema },
-      async (request, reply) => {
-        if (!signedBy(key, request, bugs)) {
-          return reply
-            .code(401)
-            .send({ message: "The signature is missing or does not match" });
-        }
+      {
+        schema: walletWebhookSchema,
+        preValidation: async (request, reply) => {
+          if (!signedBy(key, request, bugs)) {
+            return reply
+              .code(401)
+              .send({ message: "The signature is missing or does not match" });
+          }
+        },
+      },
+      async (request) => {
         const now = nowOf(request);
         const notice = request.body;
         const resource = await resourceOf(db, notice.resource);
@@ -290,20 +296,21 @@ function signedBy(
   return given.length === expected.length && timingSafeEqual(given, expected);
 }
 
-// The last resource of the reference that no webhook paid yet.
+// The last resource of the reference for that amount that no webhook paid yet.
 async function unpaidResourceOf(
   db: Pool,
   referenceCode: string,
+  amount: number,
 ): Promise<{ id: string; qr: string; link: string } | undefined> {
   const [rows] = await db.query<RowDataPacket[]>(
     `SELECT r.resource_id, r.qr, r.link FROM bridge_operations r
-     WHERE r.operation = 'resource' AND r.result = 'OK' AND r.reference_code = ?
+     WHERE r.operation = 'resource' AND r.result = 'OK' AND r.reference_code = ? AND r.amount = ?
        AND NOT EXISTS (
          SELECT 1 FROM bridge_operations w
          WHERE w.operation = 'webhook' AND w.result = 'OK' AND w.resource_id = r.resource_id
        )
      ORDER BY r.id DESC LIMIT 1`,
-    [referenceCode],
+    [referenceCode, amount],
   );
   const row = rows[0];
   return row === undefined

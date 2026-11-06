@@ -68,13 +68,13 @@ describe("the result of a case", () => {
   it("fails when the database does not match what the API confirmed", () => {
     const problem = checkProblem("final-check", {
       result: "mismatch",
-      detail: "MX-0000000001 is confirmed, and the API never confirmed it",
+      detail: "MX-0000000001 is confirmed, and the case did not expect it",
       readings: [],
     });
     expect(resultOf(problem)).toMatchObject({
       result: "failed",
       reason:
-        "final-check: MX-0000000001 is confirmed, and the API never confirmed it",
+        "final-check: MX-0000000001 is confirmed, and the case did not expect it",
     });
   });
 

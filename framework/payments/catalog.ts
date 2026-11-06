@@ -310,12 +310,12 @@ function applies(item: Case, integration: Integration): string | undefined {
   // Only a third party sends a webhook: a late one, after its reference expired or was cancelled,
   // and the ways of sending it.
   const webhookOnly =
-    (webhookWays as readonly (string | undefined)[]).includes(
+    step === "notice" &&
+    ((webhookWays as readonly (string | undefined)[]).includes(
       item.objective.caller,
     ) ||
-    (item.flow === "transition" &&
-      step === "notice" &&
-      list(item.from ?? []).some((from) => !isPaymentState(from)));
+      (item.flow === "transition" &&
+        list(item.from ?? []).some((from) => !isPaymentState(from))));
   if (webhookOnly && integration.notice !== "webhook") {
     return `${integration.name} has no webhook, so the case does not apply`;
   }
@@ -356,7 +356,8 @@ function applies(item: Case, integration: Integration): string | undefined {
 
 // How a webhook can arrive besides the usual way, with another amount than its resource, without
 // its signature, with a wrong one or of a resource nobody created (8.8, 8.9). Only the framework
-// sends the last three: the third party itself always signs, and only pays what it made.
+// sends the last three: the third party itself always signs, and only pays what it made. Another
+// amount also goes with asking for a resource again.
 const webhookWays = [
   "other-amount",
   "unsigned",
@@ -457,7 +458,8 @@ function checkCaller(item: Case, integration: Integration): void {
   }
   if (
     (webhookWays as readonly (string | undefined)[]).includes(caller) &&
-    step !== "notice"
+    step !== "notice" &&
+    !(caller === "other-amount" && step === "request")
   ) {
     throw new Error(
       `${item.id}: a way of sending the webhook goes with the notice`,

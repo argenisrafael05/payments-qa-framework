@@ -78,6 +78,8 @@ describe("the bridge of the wallet", () => {
       .update(request?.body ?? "")
       .digest("hex");
     expect(request?.headers["x-wallet-signature"]).toBe(`sha256=${signature}`);
+    // With spaces, so a signature checked over the JSON PayRef read fails.
+    expect(request?.body).toContain('"amount": 150.5');
   });
 
   it("reads the codes of the wallet as the codes of PayRef", () => {
@@ -192,6 +194,7 @@ describe("the bridge of the wallet", () => {
         .map((entry) => [entry.case.id, entry.notApplicable]),
     );
     expect([...reasons.keys()].filter((id) => !id.startsWith("F07"))).toEqual([
+      "F06-04",
       "F08-04",
       "F08-05",
       "F08-06",

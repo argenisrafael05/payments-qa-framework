@@ -98,6 +98,39 @@ export async function webhooksOf(
   };
 }
 
+// The log of the bridge for a reference, as a photo in the evidence. It decides nothing, so a
+// reading that fails only says so (3.1).
+export async function bridgeLogOf(
+  db: Pool,
+  reference: string,
+): Promise<ReadingRecord> {
+  const name = "The log of the bridge";
+  try {
+    const [rows] = await db.query<RowDataPacket[]>(
+      `SELECT id, operation, resource_id, amount, result, folio, created_at
+       FROM bridge_operations WHERE reference_code = ? ORDER BY id`,
+      [reference],
+    );
+    return {
+      name,
+      rows: rows.map((row) => ({
+        id: row.id,
+        operation: row.operation,
+        resourceId: row.resource_id,
+        amount: row.amount,
+        result: row.result,
+        folio: row.folio,
+        createdAt: instant(row.created_at),
+      })),
+    };
+  } catch (error) {
+    return {
+      name,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
 export type StoredReference = {
   code: string;
   merchantId: string;

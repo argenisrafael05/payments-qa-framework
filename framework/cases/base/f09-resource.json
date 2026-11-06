@@ -11,5 +11,22 @@
     "objective": { "step": "request", "expect": "OK" },
     "checks": ["same-resource"],
     "tags": ["hu-11"]
+  },
+  {
+    "id": "F09-02",
+    "title": "Asking again with another amount gives a new resource",
+    "flow": "transition",
+    "reference": {
+      "type": "single",
+      "amountType": "open"
+    },
+    "from": "created",
+    "objective": {
+      "step": "request",
+      "expect": "OK",
+      "caller": "other-amount"
+    },
+    "checks": ["another-resource"],
+    "tags": ["hu-11"]
   }
 ]

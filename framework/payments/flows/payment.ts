@@ -188,7 +188,9 @@ export function flowOf(
           ? paying
           : transition?.event === "notice"
             ? noticeOf(integration, source)
-            : (events[transition?.event ?? ""] ?? []);
+            : transition?.event === "inquiry"
+              ? [...token, ...asks]
+              : (events[transition?.event ?? ""] ?? []);
       return [
         merchantToken,
         createReference,

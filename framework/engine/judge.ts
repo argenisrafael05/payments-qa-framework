@@ -18,8 +18,7 @@ export type JudgeCheck =
   | "code"
   | "unclassified";
 
-// What the response says, apart from the verdict: a payment the API confirmed counts even when
-// the case expected a rejection, because the database has to match it (HU-01).
+// What the response says, apart from the verdict: whether it is a success, and its body.
 type Reading = { succeeded: boolean; body?: JsonObject };
 
 export type Verdict =

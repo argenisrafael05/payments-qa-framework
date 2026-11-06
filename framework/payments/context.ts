@@ -12,7 +12,7 @@ import type {
 import { WalletBridgeApi } from "../integrations/wallet/WalletBridgeApi.ts";
 import type { Environment, Role } from "./environment.ts";
 
-// A payment the API answered OK, as the database must keep it: pending while the window of its
+// A payment the case expected and the API answered OK, as the database must keep it: pending while the window of its
 // request runs, confirmed by its notice or by the end of its window, or reversed.
 export type ExpectedPayment = {
   folio: string;
@@ -23,6 +23,8 @@ export type ExpectedPayment = {
   sequence: string;
   paymentMethodId: string;
   status: "pending" | "confirmed" | "reversed";
+  // When its request came, when the case fixes the time.
+  requestedAt?: string;
   // When the window confirmed it on its own, at the end of the window.
   confirmedAt?: string;
 };
@@ -63,7 +65,8 @@ export type PaymentContext = {
   resource?: { id: string };
   secondResource?: { id: string };
   simulator?: ThirdPartySimulator;
-  // What the API answered OK. The database has to match it at the end (HU-01).
+  // What the case expected and the API answered OK. The database has to match it at the end
+  // (HU-01).
   payments: ExpectedPayment[];
   // The merchant cancelled the reference, and the API confirmed it.
   cancelled?: boolean;

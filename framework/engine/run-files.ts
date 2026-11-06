@@ -27,6 +27,11 @@ export function runFile(directory: string): string {
   return join(directory, "run.json");
 }
 
+// A test repeated by the run keeps each repetition apart, so a later one never hides a failure.
+export function caseName(title: string, repeat: number): string {
+  return repeat === 0 ? title : `${title}__repeat-${repeat + 1}`;
+}
+
 export function caseFile(directory: string, name: string): string {
   return join(directory, "cases", `${name}.json`);
 }

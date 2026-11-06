@@ -58,6 +58,8 @@ export function createAuth(
     );
   }
 
+  // It goes on onRequest, before the body is read: the credential is the first rule (8.4), so
+  // nobody without one ever learns how a request has to be written.
   function allow(role: Caller["role"], operation?: Operation) {
     return async (request: FastifyRequest, reply: FastifyReply) => {
       const token = request.headers.authorization?.replace(/^Bearer /, "");

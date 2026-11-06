@@ -11,8 +11,7 @@
     "time": "2026-11-20T12:00:00",
     "from": "expired",
     "objective": { "step": "notice", "expect": "R-103" },
-    "tags": ["hu-11", "hu-12"],
-    "notes": "PayRef 1.0 does not check the expiry again in the webhook: that is its bug 6."
+    "tags": ["hu-11", "hu-12"]
   },
   {
     "id": "F08-02",
@@ -24,8 +23,7 @@
     },
     "from": "cancelled",
     "objective": { "step": "notice", "expect": "R-105" },
-    "tags": ["hu-11", "hu-12"],
-    "notes": "PayRef 1.0 answers the wallet that it accepted the webhook, though the core rejected it: that is its bug 7. Only the framework sees that answer."
+    "tags": ["hu-11", "hu-12"]
   },
   {
     "id": "F08-03",
@@ -70,8 +68,7 @@
       "expect": 401,
       "caller": "bad-signature"
     },
-    "tags": ["hu-09", "hu-11"],
-    "notes": "PayRef 1.0 takes any signature, as long as there is one: that is its bug 5."
+    "tags": ["hu-09", "hu-11"]
   },
   {
     "id": "F08-06",

@@ -53,17 +53,17 @@ export class WalletBridgeApi implements ThirdPartyApi {
     });
   }
 
-  // Signed as the wallet would: HMAC-SHA256 with its key, over the exact body that travels.
-  // Without a key there is nothing to sign with, so it goes without a signature, like a webhook
-  // somebody forged.
+  // Signed as the wallet would: HMAC-SHA256 with its key, over the exact body that travels. It
+  // travels with spaces on purpose, so a signature checked over the JSON PayRef read, and not
+  // over what arrived, fails. Without a key there is nothing to sign with, so it goes without a
+  // signature, like a webhook somebody forged.
   webhook(key: string, notice: PaymentNotice): Promise<Exchange> {
-    const signature = createHmac("sha256", key)
-      .update(JSON.stringify(notice))
-      .digest("hex");
+    const body = JSON.stringify(notice, null, 1);
+    const signature = createHmac("sha256", key).update(body).digest("hex");
     return this.#http.call(walletBridgeApi.webhook, {
       method: "POST",
       path: "/wallet/webhooks",
-      body: notice,
+      body,
       headers:
         key === "" ? {} : { "x-wallet-signature": `sha256=${signature}` },
     });

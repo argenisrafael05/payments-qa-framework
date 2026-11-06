@@ -3,7 +3,13 @@
     "id": "F02-01",
     "title": "A code nobody created is not found, whatever its length",
     "flow": "unknown-reference",
-    "code": ["short", "exact", "long", "other-region"],
+    "code": [
+      "short",
+      "exact",
+      "long",
+      "other-region",
+      "000000000000000000000000000000"
+    ],
     "objective": {
       "step": "request",
       "expect": "R-101"

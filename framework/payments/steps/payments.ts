@@ -1,4 +1,5 @@
 import type { JsonObject } from "../../engine/http.ts";
+import { UnexpectedResponse } from "../../engine/results.ts";
 import {
   need,
   text,
@@ -197,7 +198,7 @@ export const secondPayment: PaymentStep = {
     ),
 };
 
-// A payment the API answered OK, which the database has to have at the end.
+// A payment the case expected and the API answered OK, which the database has to have at the end.
 export function keepPayment(
   context: PaymentContext,
   body: JsonObject,
@@ -211,16 +212,21 @@ export function keepPayment(
     sequence,
     paymentMethodId: context.paymentMethod.id,
     status,
+    ...(context.time === undefined
+      ? {}
+      : { requestedAt: new Date(context.time).toISOString() }),
   });
 }
 
-// The payment of a folio its request already kept.
+// The payment of a folio its request already kept. A folio nobody asked for is what the system
+// answered, not a mistake of the framework (8.5).
 export function paymentOf(
   context: PaymentContext,
   folio: string,
 ): ExpectedPayment {
-  return need(
-    context.payments.find((payment) => payment.folio === folio),
-    `The payment ${folio}`,
-  );
+  const payment = context.payments.find((each) => each.folio === folio);
+  if (payment === undefined) {
+    throw new UnexpectedResponse(`answered ${folio}, a folio nobody asked for`);
+  }
+  return payment;
 }
