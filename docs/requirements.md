@@ -1,255 +1,256 @@
-# Requerimientos de Payments QA Framework
+# Requirements
 
-| Versión | Fecha          | Cambio                                                                                                                                                                                                                                      |
-| ------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | Octubre 2026   | Versión inicial                                                                                                                                                                               |
-| 0.2     | Octubre 2026   | Cambios de la revisión estática y del [análisis de pruebas](test-analysis.md)                                                                                                                |
-| 0.3     | Octubre 2026   | La consulta solo informa y el pago siempre valida (HU-08)                                                                                                                                     |
-| 0.4     | Octubre 2026   | Cancelar una referencia vencida responde R-103 (HU-07)                                                                                                                                        |
-| 0.5     | Octubre 2026   | La config de cada integración trae sus merchants, cada uno con un alias (HU-03)                                                                                                               |
-| 0.6     | Octubre 2026   | Lo que cambia por región en un caso lo pone el framework (HU-03)                                                                                                                              |
-| 0.7     | Noviembre 2026 | La consulta informa la vencida como vencida (HU-08), otro monto pide otro recurso (HU-11), la base cuadra con lo que el caso esperaba (HU-01) y el README liga al paso a paso (HU-06) |
+| Version | Date          | Change                                                                                                                                                                                                          |
+| ------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | October 2026  | Initial version                                                                                                                                                                                                 |
+| 0.2     | October 2026  | Changes from the static review and the [test analysis](test-analysis.md)                                                                                                                                        |
+| 0.3     | October 2026  | The inquiry only informs, and the payment always validates (US-08)                                                                                                                                              |
+| 0.4     | October 2026  | Cancelling an expired reference answers R-103 (US-07)                                                                                                                                                           |
+| 0.5     | October 2026  | Each integration's config brings its merchants, each one with an alias (US-03)                                                                                                                                  |
+| 0.6     | October 2026  | What changes by region in a case is filled in by the framework (US-03)                                                                                                                                          |
+| 0.7     | November 2026 | The inquiry reports an expired reference as expired (US-08), another amount gets another resource (US-11), the database matches what the case expected (US-01) and the README links to the step by step (US-06) |
+| 1.0     | November 2026 | Version published with the project                                                                                                                                                                              |
 
-## 1. Visión
+## 1. Vision
 
-Este proyecto es un framework para automatizar las pruebas de un orquestador de pagos. Automatiza lo que un QA hace a mano una y otra vez: crear una referencia, pagarla por cada integración, y revisar que el orquestador aplique bien las reglas y que en la base quede lo que tiene que quedar.
+This project is a framework to automate the testing of a payments orchestrator. It automates what a QA does by hand over and over: create a reference, pay it through each integration, and check that the orchestrator applies its rules and that the database ends up with what it should.
 
-Lo que más importa es cómo está armado. El flujo de pago se programa una sola vez, y cada integración nada más dice qué usa. Así, agregar una integración o un caso nuevo cuesta poco, y el código se puede mantener.
+What matters most is how it's built. The payment flow is written once, and each integration just declares what it uses. That makes adding an integration or a case cheap, and keeps the code maintainable.
 
-El orquestador que se prueba se llama PayRef. Es un sistema simulado que vive en este mismo repo. Conecta al merchant, que necesita cobrar, con los payment methods que le cobran al cliente: un súper, un banco y una wallet. Lo que los une es la referencia de pago: el merchant la crea y el cliente la paga donde prefiera. PayRef trae bugs sembrados a propósito, para demostrar que las pruebas los atrapan.
+The orchestrator under test is called PayRef. It's a simulated system that lives in this same repo. It connects the merchant, who needs to get paid, with the payment methods that collect from the customer: a supermarket, a bank and a wallet. What ties them together is the payment reference: the merchant creates it, and the customer pays it wherever they prefer. PayRef ships with bugs seeded on purpose, to show that the tests catch them.
 
-Cada corrida genera un reporte de ejecución con el resumen de resultados al inicio. Al abrir cada caso se pueden auditar sus pasos, las comprobaciones y las evidencias. Se conserva también el reporte de Playwright.
+Each run generates an execution report with a summary of the results at the top. Opening a case lets you audit its steps, its checks and its evidence. The Playwright report is kept too.
 
-## 2. Usuarios
+## 2. Users
 
-**De lo que construimos (el framework y su reporte)**
+**Of what we build (the framework and its report)**
 
-| Usuario         | Qué busca                                                                                                                                                                                   |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Equipo de QA    | Automatizar los flujos de pago de cada integración, con sus validaciones, y saber después de cada cambio si todo sigue bien. También agregar integraciones y casos nuevos sin mucho trabajo |
-| Líder           | Consultar el resultado y el alcance de la corrida, y revisar los casos con sus evidencias                                                                                                   |
-| Revisor técnico | Clonar el repo, correrlo y entender cómo está armado                                                                                                                                        |
+| User               | Goal                                                                                                                                                                                      |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| QA team            | Automate the payment flows of each integration, with their validations, and know after every change whether everything still works. Also add new integrations and cases without much work |
+| Lead               | Check the result and the scope of a run, and review the cases with their evidence                                                                                                         |
+| Technical reviewer | Clone the repo, run it and understand how it's built                                                                                                                                      |
 
-**De lo que probamos (PayRef)**
+**Of what we test (PayRef)**
 
-| Usuario                                | Qué busca                                                                                                                                                                                                                |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Merchant                               | Necesita cobrar: entra con su propia llave, crea referencias de pago, consulta su estatus, pide el QR o link de la wallet y las cancela cuando ya no aplican                                                             |
-| Payment method estándar, como un súper | Consultar la referencia y avisar el pago cuando el cliente ya pagó                                                                                                                                                       |
-| Banco, un payment method personalizado | Usa el contrato estándar y en su configuración prende una regla de negocio especial, la ventana de reverso: valida antes de confirmar y puede reversar dentro de la ventana si algo falla. No todos los bancos la tienen |
-| Wallet, un payment method digital      | Genera un QR o link para que el cliente pague, y avisa el pago con un webhook firmado                                                                                                                                    |
+| User                                        | Goal                                                                                                                                                                                                           |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Merchant                                    | Needs to get paid: logs in with its own key, creates payment references, checks their status, asks for the wallet's QR or link, and cancels them when they no longer apply                                     |
+| Standard payment method, like a supermarket | Look up the reference and report the payment once the customer has paid                                                                                                                                        |
+| Bank, a customized payment method           | Uses the standard contract and turns on a special business rule in its config, the reversal window: it validates before confirming and can reverse within the window if something fails. Not every bank has it |
+| Wallet, a digital payment method            | Generates a QR or link for the customer to pay, and reports the payment with a signed webhook                                                                                                                  |
 
-## 3. Alcance
+## 3. Scope
 
-**Incluye:**
+**Includes:**
 
-- El framework, que automatiza los flujos de pago de las tres integraciones de punta a punta, con sus casos positivos y negativos. Valida las reglas de negocio más importantes, revisa el efecto de cada pago en la base y cubre también seguridad básica. Está armado para crecer: el flujo se programa una vez, cada integración solo declara su configuración, y después se le pueden sumar pruebas de seguridad, de concurrencia o de performance. Deja evidencia de cada paso, caza los bugs sembrados y genera un reporte de ejecución con resultados y evidencias, además del reporte de Playwright.
-- PayRef, el orquestador: la solicitud y el aviso de pago, los 8 tipos de referencia, dos regiones (México y Sudamérica) con sus reglas, los tres payment methods, su modelo de respuesta y 8 bugs sembrados.
+- The framework, which automates the payment flows of the three integrations end to end, with positive and negative cases. It validates the most important business rules, checks the effect of each payment on the database and covers basic security. It's built to grow: the flow is written once, each integration only declares its config, and security, concurrency or performance tests can be added later. It leaves evidence of each step, catches the seeded bugs and generates an execution report with results and evidence, plus the Playwright report.
+- PayRef, the orchestrator: the payment request and notice, the 8 reference types, two regions (Mexico and South America) with their rules, the three payment methods, its response model and 8 seeded bugs.
 
-**Fuera de alcance por ahora (próximamente):** el CI/CD, la conexión con TestRail, la liquidación al merchant, el adaptador, las otras reglas opcionales (sobremonto, impedir doble pago en la ventana y reintento del aviso), el horario restringido, la conciliación, los payouts, los frontends, las pruebas de concurrencia y de performance, con los límites de peticiones, y las pruebas de contrato de las APIs, como un set aparte de regresión para cuando cambie el core.
+**Out of scope for now:** CI/CD, the TestRail connection, settling with the merchant, the adapter, the other optional rules (overpayment, blocking a double payment during the window and notice retries), restricted hours, reconciliation, payouts, frontends, concurrency and performance tests with request limits, and API contract tests, as a separate regression set for when the core changes.
 
-**Fuera de alcance, porque no son de PayRef:** los rechazos y las caídas de los terceros, como la wallet. Tienen sus propias políticas, que no controlamos, así que se prueba lo que valida PayRef.
+**Out of scope because they aren't PayRef's:** rejections and outages of third parties, like the wallet. They have their own policies, which we don't control, so what gets tested is what PayRef validates.
 
-**Restricciones:**
+**Constraints:**
 
-- PayRef vive dentro del repo como una caja negra: el framework le habla por HTTP y lee su base para validar, pero nunca importa su código.
-- Todo lo de PayRef es ficticio: sus nombres, sus contratos y sus datos se inventaron para este proyecto.
+- PayRef lives in the repo as a black box: the framework talks to it over HTTP and reads its database to validate, but never imports its code.
+- Everything about PayRef is fictional: its names, contracts and data were made up for this project.
 
-## 4. Épicas
+## 4. Epics
 
-| Épica                              | Descripción                                                                                                    | Historias                    |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| E1. El framework de automatización | Lo que construimos: automatizar los flujos de pago y sus validaciones, con una arquitectura que aguante crecer | HU-01 a HU-06, HU-12 y HU-13 |
-| E2. PayRef, el orquestador         | Lo que probamos: el merchant, los payment methods y el orquestador que los conecta                             | HU-07 a HU-11                |
+| Epic                         | Description                                                                                         | Stories                         |
+| ---------------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------- |
+| E1. The automation framework | What we build: automate the payment flows and their validations, with an architecture that can grow | US-01 to US-06, US-12 and US-13 |
+| E2. PayRef, the orchestrator | What we test: the merchant, the payment methods and the orchestrator that connects them             | US-07 to US-11                  |
 
-## 5. Historias de usuario
+## 5. User stories
 
-Prioridad con MoSCoW: **Must** (obligatoria), **Should** (importante) y **Could** (deseable). Las 13 son Must: sin cualquiera de ellas, el proyecto no demuestra lo que promete. Los IDs no se renumeran: una historia nueva toma el siguiente número libre.
+Priority uses MoSCoW: **Must** (required), **Should** (important) and **Could** (nice to have). All 13 are Must: without any of them, the project doesn't show what it promises. IDs don't get renumbered: a new story takes the next free number.
 
-### E1. El framework de automatización
+### E1. The automation framework
 
-**HU-01 Automatizar los flujos de pago de punta a punta** · Must
+**US-01 Automate the payment flows end to end** · Must
 
-Como equipo de QA, quiero que los flujos de pago de cada integración corran solos, de punta a punta, para saber después de cada cambio si todo sigue bien, sin volver a hacer a mano lo de siempre: crear la referencia, pagarla y revisar la base.
+As a QA team, I want the payment flows of each integration to run on their own, end to end, so I know after every change whether everything still works, without redoing the same things by hand: creating the reference, paying it and checking the database.
 
-- El súper, el banco y la wallet corren sus flujos completos: se crea la referencia, llegan la solicitud y el aviso, el banco también puede reversar y la wallet avisa con su webhook.
-- Cada paso dice qué esperaba, qué llegó y si cumplió.
-- La base tiene la última palabra: tiene que cuadrar con lo que el caso esperaba y la API confirmó. Un pago que la API aceptó donde el caso esperaba un rechazo no cuenta, así que si quedó en la base, también falla ahí. Cada pago que cuenta tiene su movimiento, en el estado que le toca (confirmado, pendiente mientras corre la ventana del banco, o reversado), y un rechazo no agrega ninguno. Si no cuadra, el caso falla.
-- La revisión de la base corre al final de cada caso, aunque un paso haya fallado, y su resultado se ve sin cambiar el motivo principal.
-- Cada paso deja su evidencia real, sin credenciales a la vista. El que ejecuta guarda lo que se mandó y lo que contestó PayRef, o el error si no hubo respuesta. El que observa guarda lo que leyó de la base y la llamada que disparó la acción, si la hubo.
-- Con un solo comando, `npm test`, corren las tres integraciones una por una, cada una como su propia corrida. Corren las tres aunque una falle, y el comando termina con error si algún caso salió Fallido o No concluido.
-- También se puede correr una sola integración, un caso con todas sus variaciones o una sola variación, y esa corrida queda aparte de las demás.
+- The supermarket, the bank and the wallet run their full flows: the reference is created, the request and the notice arrive, the bank can also reverse, and the wallet reports with its webhook.
+- Each step says what it expected, what it got and whether it passed.
+- The database has the last word: it has to match what the case expected and the API confirmed. A payment the API accepted where the case expected a rejection doesn't count, so if it stayed in the database, it fails there too. Each payment that counts has its movement, in the state it should be in (confirmed, pending while the bank's window runs, or reversed), and a rejection adds none. If it doesn't match, the case fails.
+- The database check runs at the end of every case, even if a step failed, and its result shows without changing the main reason.
+- Each step leaves real evidence, with no credentials in sight. A step that executes keeps what was sent and what PayRef answered, or the error if there was no response. A step that observes keeps what it read from the database and the call that triggered the action, if there was one.
+- A single command, `npm test`, runs the three integrations one by one, each as its own run. All three run even if one fails, and the command ends with an error if any case came out Failed or Inconclusive.
+- You can also run a single integration, a case with all its variations or a single variation, and that run stays apart from the others.
 
-**HU-02 Validar las reglas de negocio** · Must
+**US-02 Validate the business rules** · Must
 
-Como equipo de QA, quiero validar las reglas de negocio de cada pago, para atrapar lo que un 200 esconde: un rechazo equivocado, un pago repetido o una regla de región que no se cumple.
+As a QA team, I want to validate the business rules of each payment, to catch what a 200 hides: a wrong rejection, a repeated payment or a regional rule that isn't met.
 
-- Lo que decide es el código de negocio, no el 200: un caso que espera un rechazo pasa solo si llega justo ese código. Si espera un rechazo técnico, como un 400, un 401 o un 403, también tiene que llegar justo ese.
-- Si llega otro código, un 500 o una respuesta que la política no reconoce, el caso falla y dice qué esperaba y qué llegó.
-- Un aviso repetido se rechaza, y en la base queda un solo movimiento: en una recurrente con R-106, y en una única con R-102, porque la revisión de ya pagada responde antes.
-- Una referencia única que ya se pagó se rechaza, traiga la secuencia que traiga.
-- Cada regla de región tiene su caso en la frontera: un código de otro largo, las 23:59 del día en que vence y las 00:00 del día siguiente en la hora de la región, y un monto con un decimal de más.
-- Los casos de vencimiento y de la ventana del banco fijan la hora en la petición, así que prueban la frontera exacta sin esperar tiempo real.
-- Una respuesta que enseña un stacktrace, SQL o rutas internas hace fallar el caso, aunque traiga el código esperado.
+- The business code decides, not the 200: a case that expects a rejection only passes if exactly that code arrives. If it expects a technical rejection, like a 400, a 401 or a 403, exactly that one has to arrive too.
+- If another code arrives, or a 500, or a response the policy doesn't recognize, the case fails and says what it expected and what it got.
+- A repeated notice is rejected, and only one movement stays in the database: with R-106 on a recurring reference, and with R-102 on a single one, because the already-paid check answers first.
+- A single reference that's already paid is rejected, whatever sequence comes.
+- Each regional rule has its case at the boundary: a code of another length, 23:59 on the day it expires and 00:00 the next day in the region's time, and an amount with one decimal too many.
+- The expiry cases and the bank's window cases set the time in the request, so they test the exact boundary without waiting in real time.
+- A response that shows a stack trace, SQL or internal paths fails the case, even if it brings the expected code.
 
-**HU-03 Conectar una integración o agregar un caso sin tocar el flujo** · Must
+**US-03 Connect an integration or add a case without touching the flow** · Must
 
-Como equipo de QA, quiero conectar una integración nueva o agregar un caso nuevo sin tocar el flujo de pago, para que sumar cobertura cueste poco y el código siga limpio.
+As a QA team, I want to connect a new integration or add a new case without touching the payment flow, so that adding coverage stays cheap and the code stays clean.
 
-- El banco entra solo con su configuración, sin código propio: su ventana de reverso es una regla que se prende en su JSON.
-- La config de cada integración trae su payment method y sus merchants: el que crea sus referencias y los otros que piden algunos casos, cada uno con un alias que dice para qué es. Un caso nombra el alias, nunca el id, y si un id cambia, solo cambia la config.
-- Un caso nuevo es un JSON que dice su flujo, su referencia y su objetivo: el paso donde termina y el código que espera.
-- Un caso del catálogo base corre en todas las integraciones que pueden hacerlo, sin copiarlo. Lo que cambia por región, como un monto de frontera, el largo del código o la hora, el caso lo dice por lo que es y el framework pone el número de cada región. Las que no pueden lo enseñan en el reporte como No ejecutado, con su razón.
-- Si un eje de la referencia trae una lista, sale una prueba por cada valor.
-- Un error de dedo en un caso o en una integración falla al cargar: la corrida no empieza, y el error dice qué archivo y qué campo están mal.
-- Una integración con un contrato distinto trae solo su cliente y su traducción. Los flujos, el juez y la evidencia no cambian.
+- The bank comes in with just its config and no code of its own: its reversal window is a rule that gets turned on in its JSON.
+- Each integration's config brings its payment method and its merchants: the one that creates its references and the others some cases ask for, each one with an alias that says what it's for. A case names the alias, never the id, and if an id changes, only the config changes.
+- A new case is a JSON that states its flow, its reference and its objective: the step where it ends and the code it expects.
+- A case from the base catalog runs on every integration that can do it, without copying it. What changes by region, like a boundary amount, the code length or the time, the case states by what it is, and the framework fills in each region's number. Those that can't run it show it in the report as Not run, with its reason.
+- If an axis of the reference brings a list, there's one test per value.
+- A typo in a case or an integration fails at load time: the run doesn't start, and the error says which file and which field are wrong.
+- An integration with a different contract only brings its client and its translation. The flows, the judge and the evidence don't change.
 
-**HU-04 Demostrar que las pruebas sirven** · Must
+**US-04 Show that the tests work** · Must
 
-Como equipo de QA, quiero correr las integraciones contra una versión de PayRef con bugs, para demostrar que las pruebas los atrapan, como pasaría con un release real.
+As a QA team, I want to run the integrations against a version of PayRef with bugs, to show that the tests catch them, the way it would happen with a real release.
 
-- La versión 1.0 de PayRef trae los 8 bugs sembrados, y la 1.1 viene corregida.
-- Contra la 1.1, todos los casos que le tocan a cada integración salen Correcto.
-- Contra la 1.0, cada bug hace fallar al menos un caso en la comprobación que le toca, y el reporte lo enseña como Fallido, con su motivo.
-- Un timeout o un error del framework no cuentan como bug atrapado.
-- Los docs dicen qué caso atrapa cada bug.
-- `npm run test:bugs` corre esta demo con un solo comando.
+- PayRef 1.0 ships with the 8 seeded bugs, and 1.1 comes fixed.
+- Against 1.1, every case that applies to each integration comes out Passed.
+- Against 1.0, each bug fails at least one case in the check it belongs to, and the report shows it as Failed, with its reason.
+- A timeout or a framework error doesn't count as a caught bug.
+- The README says which case catches each bug.
+- `npm run test:bugs` runs this demo with a single command.
 
-**HU-05 Leer el reporte de la corrida** · Must
+**US-05 Read the report of a run** · Must
 
-Como líder, quiero leer el resumen de cada corrida y abrir cualquier caso hasta su evidencia, para saber qué pasó sin pedírselo a nadie y poder auditarlo.
+As a lead, I want to read the summary of each run and open any case down to its evidence, to know what happened without asking anyone and to be able to audit it.
 
-- Lo primero que se ve es el resumen: el contexto de la corrida (la integración, la región, el ambiente y la versión de PayRef), cuántos casos corrieron y cómo salieron.
-- Cada variación de un caso cuenta como un caso en el reporte, con su propio resultado y su evidencia, y se nombra con su id, la integración y lo que varió.
-- Cada caso sale con uno de cuatro resultados, con su motivo:
-  - Correcto: se cumplieron todas las comprobaciones, también si se esperaba un rechazo.
-  - Fallido: una comprobación encontró una diferencia, también un 500 que PayRef sí contestó o una respuesta sin clasificar.
-  - No concluido: no hubo respuesta, como un timeout, una conexión rechazada, un 408, 502, 503 o 504 después de sus reintentos, o la base que no se pudo consultar. También si la corrida se interrumpió.
-  - No ejecutado: el caso no empezó, por ejemplo porque no le toca a esa integración.
-- Aparte del resultado, el reporte dice si la evidencia quedó completa: cada paso que corrió tiene lo mínimo de su tipo, y cada comprobación guarda lo esperado y lo encontrado. Un caso Correcto con la evidencia incompleta enseña los dos hechos y no cuenta como aprobado.
-- Cada caso se abre hasta su paso, su comprobación y su evidencia: lo esperado, lo encontrado y lo que se ejecutó.
-- Cada corrida es independiente y guarda su reporte en su propia carpeta: repetir un caso da un reporte nuevo, sin mezclar ni pisar el anterior. Al terminar, el comando dice dónde quedó cada reporte.
-- El reporte cuenta lo que pasó: no recomienda liberar ni inventa causas. El reporte de Playwright se conserva aparte.
+- The first thing you see is the summary: the context of the run (the integration, the region, the environment and the PayRef version), how many cases ran and how they came out.
+- Each variation of a case counts as a case in the report, with its own result and evidence, and it's named with its id, the integration and what varied.
+- Each case comes out with one of four results, with its reason:
+  - Passed: all the checks were met, also when a rejection was expected.
+  - Failed: a check found a difference, also a 500 that PayRef did answer or an unclassified response.
+  - Inconclusive: there was no response, like a timeout, a refused connection, a 408, 502, 503 or 504 after its retries, or a database that couldn't be read. Also if the run was interrupted.
+  - Not run: the case didn't start, for example because it doesn't apply to that integration.
+- Apart from the result, the report says whether the evidence is complete: each step that ran has the minimum for its kind, and each check keeps what was expected and what was found. A Passed case with incomplete evidence shows both facts and doesn't count as approved.
+- Each case opens down to its step, its check and its evidence: what was expected, what was found and what was executed.
+- Each run is independent and keeps its report in its own folder: repeating a case gives a new report, without mixing with or overwriting the previous one. When it ends, the command says where each report is.
+- The report tells what happened: it doesn't recommend releasing and doesn't make up causes. The Playwright report is kept apart.
 
-**HU-06 Clonar, correr y entender el proyecto** · Must
+**US-06 Clone, run and understand the project** · Must
 
-Como revisor técnico, quiero clonar el repo y correrlo con pocos pasos, para entender cómo está armado sin pedir ayuda.
-
-- Con Node 24 y Docker, `npm install` y `npm test` bastan para correr todo. Si no hay `.env`, se usan los valores de prueba de `.env.example`.
-- Antes de los casos, una revisión rápida confirma que la base, PayRef y la wallet responden. Si Docker no está prendido, un puerto está ocupado o algo no responde, la corrida no empieza y dice qué falta.
-- El README explica cómo correrlo, qué atrapa la versión con bugs y cómo está armado, y liga al paso a paso para agregar una integración y un caso. Ese paso a paso se comprueba siguiéndolo al pie de la letra para agregar una integración de prueba, sin ayuda.
-- `npm run verify` revisa formato, lint, tipos y las pruebas del framework, sin Docker.
-
-**HU-12 Probar el aviso aunque el tercero no lo mande** · Must
-
-Como equipo de QA, quiero probar el aviso de pago de un tercero de las dos formas, armándolo y firmándolo como lo haría él, o dejando que lo mande su simulador, para no depender de que el tercero esté listo, sin hacer pasar un aviso simulado por una conexión probada.
-
-- La wallet se prueba con las dos fuentes del aviso. La wallet simulada manda el webhook normal, repetido, tarde o con otro monto. El framework genera la firma como lo haría la wallet y hace esos cuatro, y además sin firma, con firma mala y de un recurso que no existe.
-- Los positivos y los negativos corren con las dos fuentes. Si un caso pide algo que su fuente no puede hacer, no se corre, y el reporte dice por qué.
-- Cuando el aviso lo manda la wallet, el paso observa: espera a que PayRef registre el webhook en la bitácora del puente, revisa ahí el resultado contra el esperado y después los movimientos. Su evidencia son las lecturas y la llamada que disparó a la wallet.
-- El reporte dice en cada caso de dónde salió su aviso.
-
-**HU-13 Probar el propio framework** · Must
-
-Como equipo de QA, quiero que el framework tenga sus propias pruebas, para confiar en su veredicto: si el juez se equivoca, todo lo demás miente.
-
-- El juez y las comprobaciones de la base se prueban con respuestas y filas controladas: aceptan el resultado exacto y detectan otro rechazo, una respuesta sin clasificar, un problema técnico, una diferencia con la base y una fuga que trae el código esperado. También separa Fallido de No concluido: un 500 contra un timeout o un 503.
-- La evidencia se prueba: guarda lo que de verdad pasó, conserva el fallo, separa las corridas, oculta las credenciales y marca incompleto un paso al que le falta lo mínimo.
-- Una integración de prueba, hecha solo con config sobre el contrato estándar, se carga y arma sus casos sin tocar código. Si prende la ventana de reverso, le tocan sus casos, y si no, no.
-- Estas pruebas corren con `npm run test:unit`, sin PayRef ni Docker.
-
-### E2. PayRef, el orquestador
-
-**HU-07 Crear y administrar referencias** · Must
-
-Como merchant, quiero crear referencias de pago, consultarlas y cancelarlas, para cobrarles a mis clientes donde ellos prefieran pagar.
-
-- Entra con su propia llave y recibe un token, que usa en cada llamada.
-- Puede crear los 8 tipos de referencia: única o recurrente, con monto fijo o libre, y con o sin vencimiento.
-- El código que crea PayRef trae el largo de su región: 14 dígitos en México y 10 en Sudamérica.
-- Crear una referencia con datos inválidos, como un monto en cero o con más decimales de los de su región, un monto fijo que no viene o un vencimiento que ya pasó, responde 400, dice qué campo falló y no crea nada.
-- Puede consultar el estado de sus referencias: activa, pagada, cancelada o vencida. Vencida no se guarda: sale de la fecha y de la hora de su región.
-- Puede cancelar una referencia activa. Una única pagada responde R-102, una ya cancelada R-105, una vencida R-103, y una con un pago en curso en la ventana del banco, R-108.
-- Solo ve, cancela y pide el recurso de sus referencias. La de otro merchant responde R-101, como si no existiera, para no revelar que existe.
-- Una referencia cancelada ya no se puede pagar.
-
-**HU-08 Cobrar una referencia** · Must
-
-Como payment method estándar, por ejemplo un súper, quiero consultar una referencia y avisar el pago cuando el cliente ya pagó, para que el pago quede registrado en el orquestador.
-
-- Entra con su propia llave y recibe un token.
-- Puede consultar la referencia antes de cobrar, si su integración consulta. La consulta solo informa: responde los datos de la referencia y su estado, también vencida, o R-101 si no existe, sin validar el negocio y sin registrar nada.
-- Manda la solicitud y el aviso, juntos o por separado según su configuración. La solicitud, o la llamada que junta las dos, trae su secuencia y recibe folio y autorización si la referencia aplica. Por separado, el aviso trae el folio de su solicitud.
-- La solicitud valida siempre, por su cuenta, se haya consultado o no.
-- Si la referencia no aplica (no existe, está vencida, cancelada o ya pagada, o el monto no es válido), recibe el código de rechazo que corresponde.
-- Un monto no es válido si es cero o negativo, si trae más decimales de los que permite su región, si es distinto al fijo o si sale de los topes del payment method, que valen incluidos. Se rechaza con R-104 y nunca se redondea.
-- Si pide una operación que no tiene configurada, como reversar, recibe un 403.
-
-**HU-09 Las mismas reglas para todos** · Must
-
-Como merchant y como payment method, quiero que el orquestador aplique las mismas reglas a todos, para confiar en que un pago vale lo mismo, entre por donde entre.
-
-- Cada quien entra con su llave. Una llave mala, una llamada sin token o un token inválido responden 401, y el token del otro rol, como un merchant que manda una solicitud, 403. Quién llama sale siempre del token, nunca del cuerpo.
-- En el webhook lo que viaja es una firma, y si falta o no cuadra se rechaza con 401.
-- Valida siempre en el mismo orden: la credencial, que la referencia exista, que no esté cancelada, que esté vigente, el monto, que no esté pagada, que no tenga un pago en curso y que la secuencia no esté repetida.
-- Una referencia única ya pagada se rechaza con R-102, traiga la secuencia que traiga. Una secuencia que ese payment method ya usó en un pago se rechaza con R-106, igual que un segundo aviso del mismo folio. Un rechazo no deja nada, así que no gasta su secuencia.
-- Responde siempre igual: 200 con el código de negocio cuando la petición llega al negocio, y 400, 401, 403 o 5xx cuando no llega.
-- Respeta las reglas de cada región. Un código de otro largo no existe en esa región (R-101). El vencimiento es una fecha: la referencia se puede pagar todo ese día en la hora de su región (UTC−6 o UTC−3), y desde las 00:00 del día siguiente se rechaza con R-103. Los decimales del monto son los de su moneda: centavos en México y enteros en Sudamérica.
-- Cada región guarda todo en su propia base, así que una referencia de otra región no existe (R-101).
-- Ningún error enseña detalles internos, tampoco el 400 de una petición mal armada.
-
-**HU-10 La ventana de reverso del banco** · Must
-
-Como banco que prende la ventana de reverso en su configuración, quiero validar antes de confirmar y poder reversar dentro de la ventana, para deshacer un pago si algo falla de mi lado.
-
-- Si la referencia aplica, la solicitud responde OK con folio y autorización, pero el pago queda pendiente.
-- La ventana dura lo que diga la config del banco, 2 minutos por defecto, y al minuto 2 exacto ya cerró.
-- Mientras corre la ventana, otra solicitud de la referencia se rechaza con R-108, sea única o recurrente, y el merchant tampoco la puede cancelar.
-- La ventana protege al cliente, que pagó cuando la referencia estaba vigente y sin cancelar: si no hay reverso, el pago se confirma sin volver a validar, aunque la referencia venza mientras corre la ventana.
-- Dentro de la ventana, el aviso confirma el pago, y el reverso lo deja reversado: la referencia vuelve a poder pagarse.
-- Si el banco no hace nada, al vencer la ventana el pago se confirma solo. Se ve en la siguiente petición que toca la referencia o el pago, y el movimiento queda con la fecha en que venció la ventana.
-- La ventana cierra con lo primero que pase: el aviso, el reverso o su vencimiento. Después, un reverso, o un aviso de un pago reversado, se rechaza con R-107, y un aviso de un pago ya confirmado se rechaza como repetido.
-- La ventana es una regla de su configuración: otra integración la puede prender igual, sin código, y un banco que no la prende se porta como cualquier payment method estándar.
-
-**HU-11 Pagar con QR o link y avisar por webhook** · Must
-
-Como wallet, un payment method digital, quiero generar un QR o link de pago y avisar con un webhook firmado cuando el cliente paga, para que el cliente pague desde su app y el pago quede registrado en el orquestador.
-
-- El merchant pide el QR o link con su token. Antes de pedírselo a la wallet, PayRef valida igual que en una solicitud estándar: primero lo que permite el merchant, que es la referencia, y después los topes del payment method. Si no aplica, responde el rechazo de negocio.
-- El recurso es de un solo pago y de un solo monto: mientras no se paga, pedirlo otra vez con el mismo monto regresa el mismo, y con otro monto da uno nuevo. Ya pagado, una recurrente recibe uno nuevo, y una única responde R-102.
-- El webhook viaja firmado. Si la firma falta o no cuadra, se rechaza con 401 y no se registra nada.
-- Al llegar el webhook, PayRef vuelve a validar todo, por si algo cambió: si la referencia se venció o se canceló en medio, se rechaza y no se registra el pago.
-- El webhook se liga al recurso por el id que le dio la wallet, nunca por la referencia.
-- Un webhook con otro monto se rechaza con R-104, uno de un recurso que no existe con R-101, y uno repetido como un aviso repetido. En ninguno se registra nada, y nunca se responde un 500.
-- Un rechazo de PayRef nunca se vuelve un éxito al pasar por el puente: si el core rechaza el webhook, el puente responde ese rechazo.
-
-Lo extra es de cada integración, no de todos los bancos ni de todas las wallets: otra integración puede prender lo mismo con su configuración.
-
-## 6. Requisitos no funcionales
-
-| ID     | Requisito                                                                                                                                                                                                                       | Cómo se valida                                                                                                |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| RNF-01 | Corre en una máquina limpia: con Node 24 y Docker, `npm install` y `npm test` corren todo, sin pasos manuales, ni siquiera copiar el `.env`                                                                                     | Clonar en limpio y correr                                                                                     |
-| RNF-02 | Las pruebas del framework corren sin PayRef ni Docker, en menos de 30 segundos                                                                                                                                                  | `npm run test:unit`                                                                                           |
-| RNF-03 | El juez y la evidencia tienen al menos 80 % de cobertura de líneas y de ramas en las pruebas del framework                                                                                                                      | Reporte de cobertura de Vitest                                                                                |
-| RNF-04 | El código pasa TypeScript estricto, ESLint y Prettier sin errores                                                                                                                                                               | `npm run verify`                                                                                              |
-| RNF-05 | Ninguna evidencia guarda credenciales completas: el header `Authorization`, la llave y el token del auth salen ocultos. La firma del webhook queda visible, porque solo sirve para su propia petición, y el secreto nunca viaja | Prueba del framework sobre el enmascarado                                                                     |
-| RNF-06 | Las credenciales del repo son de prueba: viven en `.env.example`, y el `.env` nunca se sube                                                                                                                                     | Revisión del repo y de `.gitignore`                                                                           |
-| RNF-07 | Los casos son independientes: cada uno crea sus datos, y un caso suelto sale igual que dentro de la corrida completa                                                                                                            | Correr un caso solo y en la corrida completa                                                                  |
-| RNF-08 | Ninguna prueba espera tiempo real: los casos de tiempo usan la hora de prueba                                                                                                                                                   | Regla de ESLint en las pruebas, y el code review en lo demás                                                  |
-| RNF-09 | La corrida completa de una integración tarda menos de 5 minutos, con la imagen de MySQL ya descargada                                                                                                                           | Duración en el reporte. La primera corrida puede tardar más, y el README lo avisa                             |
-| RNF-10 | Las corridas no se pisan: cada una guarda sus archivos aparte                                                                                                                                                                   | Correr dos veces y comparar las carpetas                                                                      |
-| RNF-11 | El framework solo lee la base de PayRef, con un usuario de solo lectura                                                                                                                                                         | Antes de cada corrida, la revisión rápida intenta escribir con ese usuario, y si puede, la corrida no empieza |
-| RNF-12 | Las pruebas dan siempre el mismo resultado: las nuevas corren 3 veces seguidas y salen igual las tres                                                                                                                           | Tres corridas seguidas con `CI=1` al cerrar cada fase                                                         |
-
-## 7. Definición de terminado
-
-Una historia está terminada cuando:
-
-- Cumple sus criterios de aceptación.
-- Sus pruebas pasan contra la versión 1.1 de PayRef, y las que atrapan bugs fallan contra la 1.0 donde les toca.
-- Las pruebas del framework que la cubren pasan.
-- Sus pruebas nuevas dan siempre el mismo resultado (RNF-12).
-- `npm run verify` sale limpio.
-- Su evidencia sale completa en el reporte, o en los archivos de la corrida mientras el reporte no exista.
-- Los docs que toca están al día: el requerimiento, el análisis y las decisiones.
+As a technical reviewer, I want to clone the repo and run it in a few steps, to understand how it's built without asking for help.
+
+- With Node 24 and Docker, `npm install` and `npm test` are enough to run everything. Without a `.env`, the test values from `.env.example` are used.
+- Before the cases, a quick check confirms that the database, PayRef and the wallet respond. If Docker isn't running, a port is taken or something doesn't respond, the run doesn't start and says what's missing.
+- The README explains how to run it, what the version with bugs catches and how it's built, and links to the step by step to add an integration and a case. That step by step gets checked by following it to the letter to add a test integration, with no help.
+- `npm run verify` checks formatting, lint, types and the framework's tests, without Docker.
+
+**US-12 Test the notice even if the third party doesn't send it** · Must
+
+As a QA team, I want to test a third party's payment notice both ways, building and signing it as the third party would, or letting its simulator send it, so I don't depend on the third party being ready, without passing a simulated notice off as a tested connection.
+
+- The wallet is tested with both sources of the notice. The simulated wallet sends the webhook normally, repeated, late or with another amount. The framework generates the signature as the wallet would and does those four, plus without a signature, with a bad signature and for a resource that doesn't exist.
+- Positive and negative cases run with both sources. If a case asks for something its source can't do, it doesn't run, and the report says why.
+- When the wallet sends the notice, the step observes: it waits for PayRef to record the webhook in the bridge log, checks the result there against the expected one, and then the movements. Its evidence is the readings and the call that triggered the wallet.
+- The report says where each case's notice came from.
+
+**US-13 Test the framework itself** · Must
+
+As a QA team, I want the framework to have its own tests, so I can trust its verdict: if the judge is wrong, everything else lies.
+
+- The judge and the database checks are tested with controlled responses and rows: they accept the exact result and detect another rejection, an unclassified response, a technical problem, a difference with the database and a leak that brings the expected code. The judge also separates Failed from Inconclusive: a 500 against a timeout or a 503.
+- The evidence is tested: it keeps what really happened, preserves the failure, separates the runs, hides the credentials and marks as incomplete a step that's missing the minimum.
+- A test integration, made only of config on top of the standard contract, loads and builds its cases without touching code. If it turns on the reversal window, it gets those cases, and if not, it doesn't.
+- These tests run with `npm run test:unit`, without PayRef or Docker.
+
+### E2. PayRef, the orchestrator
+
+**US-07 Create and manage references** · Must
+
+As a merchant, I want to create payment references, look them up and cancel them, to collect from my customers wherever they prefer to pay.
+
+- It logs in with its own key and gets a token, which it uses on every call.
+- It can create the 8 reference types: single or recurring, with a fixed or open amount, with or without an expiry.
+- The code PayRef creates has the length of its region: 14 digits in Mexico and 10 in South America.
+- Creating a reference with invalid data, like a zero amount or one with more decimals than its region allows, a fixed amount that's missing or an expiry already past, answers 400, says which field failed and creates nothing.
+- It can check the state of its references: active, paid, cancelled or expired. Expired isn't stored: it comes from the date and the time of its region.
+- It can cancel an active reference. A paid single reference answers R-102, one already cancelled R-105, an expired one R-103, and one with a payment in progress in the bank's window, R-108.
+- It only sees, cancels and asks for the resource of its own references. Another merchant's answers R-101, as if it didn't exist, so as not to reveal that it does.
+- A cancelled reference can no longer be paid.
+
+**US-08 Collect a reference** · Must
+
+As a standard payment method, for example a supermarket, I want to look up a reference and report the payment once the customer has paid, so the payment gets recorded in the orchestrator.
+
+- It logs in with its own key and gets a token.
+- It can look up the reference before charging, if its integration inquires. The inquiry only informs: it answers with the reference's data and its state, expired included, or R-101 if it doesn't exist, without validating the business and without recording anything.
+- It sends the request and the notice, together or separately depending on its config. The request, or the call that joins both, brings its sequence and gets a folio and an authorization if the reference applies. When they're separate, the notice brings the folio of its request.
+- The request always validates on its own, whether there was an inquiry or not.
+- If the reference doesn't apply (it doesn't exist, it's expired, cancelled or already paid, or the amount isn't valid), it gets the matching rejection code.
+- An amount isn't valid if it's zero or negative, if it has more decimals than its region allows, if it's different from the fixed one or if it's outside the payment method's limits, which are inclusive. It's rejected with R-104 and never rounded.
+- If it asks for an operation it doesn't have configured, like reversing, it gets a 403.
+
+**US-09 The same rules for everyone** · Must
+
+As a merchant and as a payment method, I want the orchestrator to apply the same rules to everyone, to trust that a payment is worth the same, wherever it comes in.
+
+- Everyone logs in with their key. A bad key, a call without a token or an invalid token answers 401, and the other role's token, like a merchant sending a request, 403. Who's calling always comes from the token, never from the body.
+- On the webhook what travels is a signature, and if it's missing or doesn't match it's rejected with 401.
+- It always validates in the same order: the credential, that the reference exists, that it isn't cancelled, that it's still valid, the amount, that it isn't paid, that it has no payment in progress and that the sequence isn't repeated.
+- A single reference that's already paid is rejected with R-102, whatever sequence comes. A sequence that payment method already used in a payment is rejected with R-106, the same as a second notice of the same folio. A rejection leaves nothing behind, so it doesn't use up its sequence.
+- It always answers the same way: a 200 with the business code when the request reaches the business, and a 400, 401, 403 or 5xx when it doesn't.
+- It respects the rules of each region. A code of another length doesn't exist in that region (R-101). The expiry is a date: the reference can be paid all that day in its region's time (UTC−6 or UTC−3), and from 00:00 the next day it's rejected with R-103. The decimals of the amount are those of its currency: cents in Mexico and whole units in South America.
+- Each region keeps everything in its own database, so a reference from another region doesn't exist (R-101).
+- No error shows internal details, not even the 400 of a malformed request.
+
+**US-10 The bank's reversal window** · Must
+
+As a bank that turns on the reversal window in its config, I want to validate before confirming and be able to reverse within the window, to undo a payment if something fails on my side.
+
+- If the reference applies, the request answers OK with a folio and an authorization, but the payment stays pending.
+- The window lasts what the bank's config says, 2 minutes by default, and at exactly minute 2 it's already closed.
+- While the window runs, another request for the reference is rejected with R-108, single or recurring, and the merchant can't cancel it either.
+- The window protects the customer, who paid while the reference was valid and not cancelled: without a reversal, the payment is confirmed without validating again, even if the reference expires while the window runs.
+- Within the window, the notice confirms the payment and the reversal leaves it reversed: the reference can be paid again.
+- If the bank does nothing, the payment is confirmed on its own when the window ends. It shows on the next request that touches the reference or the payment, and the movement keeps the time the window ended.
+- The window closes with whatever happens first: the notice, the reversal or its end. After that, a reversal, or a notice of a reversed payment, is rejected with R-107, and a notice of a payment already confirmed is rejected as repeated.
+- The window is a rule in its config: another integration can turn it on the same way, with no code, and a bank that doesn't turn it on behaves like any standard payment method.
+
+**US-11 Pay with a QR or link and report by webhook** · Must
+
+As a wallet, a digital payment method, I want to generate a payment QR or link and report with a signed webhook when the customer pays, so the customer pays from their app and the payment gets recorded in the orchestrator.
+
+- The merchant asks for the QR or link with its token. Before asking the wallet, PayRef validates the same way as a standard request: first what the merchant allows, which is the reference, and then the payment method's limits. If it doesn't apply, it answers with the business rejection.
+- The resource is for a single payment and a single amount: while it isn't paid, asking again with the same amount returns the same one, and another amount gets a new one. Once paid, a recurring reference gets a new one, and a single one answers R-102.
+- The webhook travels signed. If the signature is missing or doesn't match, it's rejected with 401 and nothing gets recorded.
+- When the webhook arrives, PayRef validates everything again, in case something changed: if the reference expired or was cancelled in between, it's rejected and the payment isn't recorded.
+- The webhook is tied to the resource by the id the wallet gave it, never by the reference.
+- A webhook with another amount is rejected with R-104, one for a resource that doesn't exist with R-101, and a repeated one as a repeated notice. None of them records anything, and it never answers a 500.
+- A PayRef rejection never becomes a success on its way through the bridge: if the core rejects the webhook, the bridge answers that rejection.
+
+The extras belong to each integration, not to every bank or every wallet: another integration can turn on the same thing with its config.
+
+## 6. Non-functional requirements
+
+| ID     | Requirement                                                                                                                                                                                                                | How it's validated                                                                                   |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| NFR-01 | It runs on a clean machine: with Node 24 and Docker, `npm install` and `npm test` run everything, with no manual steps, not even copying the `.env`                                                                        | Clone it clean and run it                                                                            |
+| NFR-02 | The framework's tests run without PayRef or Docker, in under 30 seconds                                                                                                                                                    | `npm run test:unit`                                                                                  |
+| NFR-03 | The judge and the evidence have at least 80% line and branch coverage in the framework's tests                                                                                                                             | Vitest coverage report                                                                               |
+| NFR-04 | The code passes strict TypeScript, ESLint and Prettier with no errors                                                                                                                                                      | `npm run verify`                                                                                     |
+| NFR-05 | No evidence keeps full credentials: the `Authorization` header, the key and the auth token come out hidden. The webhook's signature stays visible, because it only works for its own request, and the secret never travels | A framework test on the masking                                                                      |
+| NFR-06 | The repo's credentials are test ones: they live in `.env.example`, and the `.env` never gets uploaded                                                                                                                      | Review of the repo and `.gitignore`                                                                  |
+| NFR-07 | The cases are independent: each one creates its data, and a case on its own comes out the same as in the full run                                                                                                          | Run a case alone and in the full run                                                                 |
+| NFR-08 | No test waits in real time: the time cases use the test time                                                                                                                                                               | The ESLint rule in the tests, and the code review for the rest                                       |
+| NFR-09 | The full run of an integration takes under 5 minutes, with the MySQL image already downloaded                                                                                                                              | The duration in the report. The first run can take longer, and the README says so                    |
+| NFR-10 | Runs don't step on each other: each one keeps its files apart                                                                                                                                                              | Run twice and compare the folders                                                                    |
+| NFR-11 | The framework only reads PayRef's database, with a read-only user                                                                                                                                                          | Before each run, the quick check tries to write with that user, and if it can, the run doesn't start |
+| NFR-12 | The tests always give the same result: new ones run 3 times in a row and come out the same                                                                                                                                 | Three runs in a row with `CI=1` at the end of each phase                                             |
+
+## 7. Definition of done
+
+A story is done when:
+
+- It meets its acceptance criteria.
+- Its tests pass against PayRef 1.1, and the ones that catch bugs fail against 1.0 where they should.
+- The framework tests that cover it pass.
+- Its new tests always give the same result (NFR-12).
+- `npm run verify` is clean.
+- Its evidence is complete in the report.
+- The docs it touches are up to date: the requirements and the analysis.
