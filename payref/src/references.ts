@@ -5,7 +5,7 @@ import { callerOf, type Auth } from "./auth.ts";
 import { nowOf, regionDate } from "./clock.ts";
 import type { RegionConfig } from "./config.ts";
 import { rejections } from "./errors.ts";
-import { checkExpiry, decimalsOf } from "./rules.ts";
+import { checkExpiry, decimalsOf, stateOf } from "./rules.ts";
 import { hasPaymentInWindow, settleWindows } from "./window.ts";
 import {
   cancelReferenceSchema,
@@ -37,7 +37,7 @@ export function registerReferences(
 ): void {
   app.post<{ Body: CreateReferenceBody }>(
     "/references",
-    { schema: createReferenceSchema, preHandler: auth.allow("merchant") },
+    { schema: createReferenceSchema, onRequest: auth.allow("merchant") },
     async (request, reply) => {
       const { type, amountType, amount, expiresOn } = request.body;
       if (amountType === "fixed" && amount === undefined) {
@@ -96,7 +96,7 @@ export function registerReferences(
   // The merchant sees its reference with its state, computed for an expired one.
   app.get<{ Params: ReferenceParams }>(
     "/references/:reference",
-    { schema: viewReferenceSchema, preHandler: auth.allow("merchant") },
+    { schema: viewReferenceSchema, onRequest: auth.allow("merchant") },
     async (request) => {
       await settleWindows(db, region, request.params.reference, nowOf(request));
       const reference = await ownReference(
@@ -107,15 +107,11 @@ export function registerReferences(
       if (!reference) {
         return rejections.notFound;
       }
-      const expired =
-        reference.status === "active" &&
-        checkExpiry(reference.expiresOn, nowOf(request), region, bugs) !==
-          undefined;
       return {
         code: "OK",
         message: "Reference found",
         reference: reference.code,
-        status: expired ? "expired" : reference.status,
+        status: stateOf(reference, nowOf(request), region, bugs),
         type: reference.type,
         amountType: reference.amountType,
         amount: reference.amount ?? undefined,
@@ -129,7 +125,7 @@ export function registerReferences(
   // window of a payment runs, it is not cancelled either (HU-10).
   app.post<{ Params: ReferenceParams }>(
     "/references/:reference/cancellation",
-    { schema: cancelReferenceSchema, preHandler: auth.allow("merchant") },
+    { schema: cancelReferenceSchema, onRequest: auth.allow("merchant") },
     async (request) => {
       await settleWindows(db, region, request.params.reference, nowOf(request));
       const reference = await ownReference(

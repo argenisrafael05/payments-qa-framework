@@ -1,8 +1,8 @@
 import type { Pool, RowDataPacket } from "mysql2/promise";
 import type { RegionConfig } from "./config.ts";
 
-// The reversal window of a bank (HU-10). Its request leaves the payment pending, and the window
-// closes with whatever comes first: the notice, the reversal or its end.
+// The reversal window of a payment method (HU-10). Its request leaves the payment pending, and
+// the window closes with whatever comes first: the notice, the reversal or its end.
 
 export type PendingPayment = {
   id: number;
