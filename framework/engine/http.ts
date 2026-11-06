@@ -55,7 +55,8 @@ export type Call = {
   method: "GET" | "POST";
   path: string;
   token?: string;
-  body?: JsonObject;
+  // As an object, or as the exact text that travels.
+  body?: JsonObject | string;
   // What the API asks for besides the token, like the signature of a webhook.
   headers?: Record<string, string>;
   // The time of this call, when it is not the one of the case.
@@ -133,7 +134,8 @@ export class Http {
     }
     if (call.body !== undefined) {
       request.headers["content-type"] = "application/json";
-      const body = JSON.stringify(call.body);
+      const body =
+        typeof call.body === "string" ? call.body : JSON.stringify(call.body);
       request.body = this.#change.breakBody === true ? body.slice(0, -1) : body;
     }
 

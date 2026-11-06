@@ -80,13 +80,19 @@ export async function runCase<C>(
         verdict = judge(outcome, expectation);
       }
       recorder.endStep(verdict);
-      if (verdict.succeeded && verdict.body !== undefined) {
+      // A step keeps only what the case expected. A payment the API confirmed where the case
+      // expected a rejection does not count, so the final check finds it too (HU-01).
+      if (
+        verdict.succeeded &&
+        verdict.body !== undefined &&
+        expectation.kind === "success"
+      ) {
         step.keep?.(context, verdict.body);
       }
       stopped = report(recorder, stepProblem(step.name, verdict));
     } catch (error) {
       recorder.endStep();
-      stopped = report(recorder, frameworkProblem(error));
+      stopped = report(recorder, frameworkProblem(error, step.name));
     }
     if (stopped) {
       break;

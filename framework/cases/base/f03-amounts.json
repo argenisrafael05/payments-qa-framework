@@ -34,7 +34,7 @@
       "amountType": "open",
       "expiresOn": [null, "2099-12-31"]
     },
-    "amount": ["below-min", "above-max"],
+    "amount": ["below-min", "above-max", 10000000000000],
     "objective": { "step": "request", "expect": "R-104" },
     "tags": ["hu-02", "hu-08"]
   },
@@ -62,7 +62,6 @@
     },
     "amount": ["extra-decimal"],
     "objective": { "step": "request", "expect": "R-104" },
-    "tags": ["hu-02", "hu-08"],
-    "notes": "PayRef 1.0 rounds it and accepts it: that is its bug 2."
+    "tags": ["hu-02", "hu-08"]
   }
 ]

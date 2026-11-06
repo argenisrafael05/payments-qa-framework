@@ -55,12 +55,12 @@ describe("the final check of the database", () => {
     });
   });
 
-  it("finds a payment the API never confirmed, the most expensive bug", () => {
+  it("finds a payment the case did not expect, the most expensive bug", () => {
     expect(compareMovements([], [stored])).toMatchObject({
       result: "mismatch",
       expected: "no movements",
       found: "1 movement: MX-0000000001 confirmed",
-      detail: "MX-0000000001 is confirmed, and the API never confirmed it",
+      detail: "MX-0000000001 is confirmed, and the case did not expect it",
     });
   });
 
@@ -109,6 +109,24 @@ describe("the final check of the database", () => {
     ).toMatchObject({ result: "match" });
   });
 
+  it("finds a request whose date was rewritten when its payment was confirmed", () => {
+    const requested = {
+      ...confirmed,
+      requestedAt: "2026-10-27T06:20:00.000Z",
+    };
+    expect(compareMovements([requested], [stored])).toMatchObject({
+      result: "mismatch",
+      detail:
+        "MX-0000000001 keeps its request at 2026-10-27T06:24:59.402Z, and it came at 2026-10-27T06:20:00.000Z",
+    });
+    expect(
+      compareMovements(
+        [{ ...confirmed, requestedAt: stored.requestedAt ?? "" }],
+        [stored],
+      ),
+    ).toMatchObject({ result: "match" });
+  });
+
   it("finds an amount the database rounded, which two decimals would hide", () => {
     // 150.504 shown with two decimals is 150.50, the same as what the database kept.
     const rounded = { ...stored, amount: "150.50" };
@@ -140,6 +158,74 @@ describe("the final check of the database", () => {
           error: "connect ECONNREFUSED 127.0.0.1:3307",
         },
       ],
+    });
+  });
+
+  it("leaves the log of the bridge as a photo for a third party, and it decides nothing", async () => {
+    const row = {
+      id: 7,
+      operation: "webhook",
+      resource_id: "wq_1",
+      amount: "150.50",
+      result: "R-105",
+      folio: null,
+      created_at: new Date("2026-11-15T18:00:00.000Z"),
+    };
+    const db = {
+      query: async (sql: string) =>
+        sql.includes("bridge_operations") ? [[row]] : [[]],
+    } as unknown as Pool;
+    const context = {
+      db,
+      created: { code: "12345678901234" },
+      payments: [],
+    } as unknown as PaymentContext;
+
+    const withoutThirdParty = await finalCheck.run(context);
+    expect(withoutThirdParty.readings.map((each) => each.name)).toEqual([
+      "The movements of the reference",
+    ]);
+
+    const outcome = await finalCheck.run({
+      ...context,
+      simulator: {},
+    } as unknown as PaymentContext);
+    expect(outcome.result).toBe("match");
+    expect(outcome.readings[1]).toEqual({
+      name: "The log of the bridge",
+      rows: [
+        {
+          id: 7,
+          operation: "webhook",
+          resourceId: "wq_1",
+          amount: "150.50",
+          result: "R-105",
+          folio: null,
+          createdAt: "2026-11-15T18:00:00.000Z",
+        },
+      ],
+    });
+  });
+
+  it("does not let a log it cannot read decide the case", async () => {
+    const db = {
+      query: async (sql: string) => {
+        if (sql.includes("bridge_operations")) {
+          throw new Error("the log is down");
+        }
+        return [[]];
+      },
+    } as unknown as Pool;
+    const outcome = await finalCheck.run({
+      db,
+      created: { code: "12345678901234" },
+      payments: [],
+      simulator: {},
+    } as unknown as PaymentContext);
+    expect(outcome.result).toBe("match");
+    expect(outcome.readings[1]).toEqual({
+      name: "The log of the bridge",
+      error: "the log is down",
     });
   });
 

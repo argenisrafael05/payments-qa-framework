@@ -15,7 +15,7 @@
   },
   {
     "id": "F07-02",
-    "title": "The reversal one second before the window closes leaves the reference payable again",
+    "title": "The reversal one second before the window closes leaves the reference active",
     "flow": "transition",
     "reference": {
       "type": ["single", "recurring"],
@@ -38,8 +38,7 @@
     "from": "pending",
     "after": "window-end",
     "objective": { "step": "reversal", "expect": "R-107" },
-    "tags": ["hu-10"],
-    "notes": "PayRef 1.0 still takes the reversal at the end of the window exactly: that is its bug 8."
+    "tags": ["hu-10"]
   },
   {
     "id": "F07-04",
@@ -143,6 +142,18 @@
     },
     "from": "reversed",
     "objective": { "step": "notice", "expect": "R-107" },
+    "tags": ["hu-10"]
+  },
+  {
+    "id": "F07-12",
+    "title": "A reversed payment leaves the reference payable again",
+    "flow": "transition",
+    "reference": {
+      "type": ["single", "recurring"],
+      "amountType": "fixed"
+    },
+    "from": "reversed",
+    "objective": { "step": "request", "expect": "OK" },
     "tags": ["hu-10"]
   }
 ]

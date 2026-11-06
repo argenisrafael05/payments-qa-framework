@@ -14,6 +14,7 @@ import { writeReport } from "../../framework/engine/report.ts";
 import { results } from "../../framework/engine/results.ts";
 import {
   caseFile,
+  caseName,
   readJson,
   runFile,
   writeJson,
@@ -44,7 +45,9 @@ export default class ConsoleReporter implements Reporter {
       payrefVersion: version,
       status: "running",
       startedAt,
-      selection: suite.allTests().map((test) => test.title),
+      selection: suite
+        .allTests()
+        .map((test) => caseName(test.title, test.repeatEachIndex)),
       errors: [],
     };
     writeJson(runFile(this.#run.directory), this.#record);
@@ -54,7 +57,8 @@ export default class ConsoleReporter implements Reporter {
   }
 
   onTestEnd(test: TestCase, result: TestResult): void {
-    const file = caseFile(this.#run.directory, test.title);
+    const name = caseName(test.title, test.repeatEachIndex);
+    const file = caseFile(this.#run.directory, name);
     const record = readJson<CaseRecord>(file);
     if (record !== undefined) {
       record.playwright = {
@@ -66,7 +70,7 @@ export default class ConsoleReporter implements Reporter {
     const outcome = outcomeOf(record);
     const seconds = `${(result.duration / 1000).toFixed(1)}s`;
     console.log(
-      `  ${resultLabels[outcome.result].padEnd(13)} ${test.title}  ${seconds}${
+      `  ${resultLabels[outcome.result].padEnd(13)} ${name}  ${seconds}${
         outcome.note === undefined ? "" : `\n  ${"".padEnd(13)} ${outcome.note}`
       }`,
     );

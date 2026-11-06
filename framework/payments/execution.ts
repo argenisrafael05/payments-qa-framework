@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import type { Pool } from "mysql2/promise";
 import { Recorder, type CaseRecord } from "../engine/evidence.ts";
 import { Http, type Transport } from "../engine/http.ts";
-import { caseFile } from "../engine/run-files.ts";
+import { caseFile, caseName } from "../engine/run-files.ts";
 import type { Expectation } from "../engine/judge.ts";
 import { closeCase, runCase, type CasePlan } from "../engine/runner.ts";
 import {
@@ -42,10 +42,13 @@ export function executeCase(options: {
   run: RunSetup;
   db: Pool;
   transport: Transport;
+  // Which repetition of the test this is, when the run repeats it.
+  repeat?: number;
 }): Execution {
   const { entry, run } = options;
-  const recorder = new Recorder(caseFile(run.directory, entry.name), {
-    name: entry.name,
+  const name = caseName(entry.name, options.repeat ?? 0);
+  const recorder = new Recorder(caseFile(run.directory, name), {
+    name,
     integration: run.integration.id,
     variation: entry.variation,
     case: entry.case,
@@ -112,14 +115,14 @@ export function executeCase(options: {
   };
 }
 
-// Seeing the reference reports the state the transition left it in (8.6). The payment of a bank
+// Seeing or inquiring the reference reports the state the transition left it in (8.6). The payment of a bank
 // leaves a single reference paid once it is confirmed, by its notice or by the end of its window,
 // and any other one active (8.7).
 function objectiveOf(entry: CaseEntry): Expectation {
   const objective = expectationOf(entry.case);
   if (
     entry.from === undefined ||
-    entry.case.objective.step !== "view" ||
+    !["view", "inquiry"].includes(entry.case.objective.step) ||
     objective.kind !== "success"
   ) {
     return objective;
@@ -278,10 +281,11 @@ const unknownKey = "a-key-payref-never-gave";
 
 const waysOfCalling: Record<CallerKind, WayOfCalling> = {
   "no-token": {
-    how: "without a token",
+    // With its body cut too: the credential goes first (8.4), so the body never gets a say.
+    how: "without a token, and with its body cut",
     change: (context) => ({
       ...context,
-      apis: apisOf(context.http.with({ token: null })),
+      apis: apisOf(context.http.with({ token: null, breakBody: true })),
     }),
   },
   "invalid-token": {
@@ -319,9 +323,10 @@ const waysOfCalling: Record<CallerKind, WayOfCalling> = {
     change: (context) => ({ ...context, amount: context.amount + 1 }),
   },
   unsigned: {
-    how: "without its signature",
+    how: "without its signature, and with its body cut",
     change: (context) => ({
       ...context,
+      apis: apisOf(context.http.with({ breakBody: true })),
       paymentMethod: { ...context.paymentMethod, key: "" },
     }),
   },

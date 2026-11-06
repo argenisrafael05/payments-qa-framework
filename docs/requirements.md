@@ -1,13 +1,14 @@
 # Requerimientos de Payments QA Framework
 
-| Versión | Fecha        | Cambio                                                                                                                        |
-| ------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | Octubre 2026 | Versión inicial                                                                 |
-| 0.2     | Octubre 2026 | Cambios de la revisión estática y del [análisis de pruebas](test-analysis.md)  |
-| 0.3     | Octubre 2026 | La consulta solo informa y el pago siempre valida (HU-08)                       |
-| 0.4     | Octubre 2026 | Cancelar una referencia vencida responde R-103 (HU-07)                          |
-| 0.5     | Octubre 2026 | La config de cada integración trae sus merchants, cada uno con un alias (HU-03) |
-| 0.6     | Octubre 2026 | Lo que cambia por región en un caso lo pone el framework (HU-03)                |
+| Versión | Fecha          | Cambio                                                                                                                                                                                                                                      |
+| ------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | Octubre 2026   | Versión inicial                                                                                                                                                                               |
+| 0.2     | Octubre 2026   | Cambios de la revisión estática y del [análisis de pruebas](test-analysis.md)                                                                                                                |
+| 0.3     | Octubre 2026   | La consulta solo informa y el pago siempre valida (HU-08)                                                                                                                                     |
+| 0.4     | Octubre 2026   | Cancelar una referencia vencida responde R-103 (HU-07)                                                                                                                                        |
+| 0.5     | Octubre 2026   | La config de cada integración trae sus merchants, cada uno con un alias (HU-03)                                                                                                               |
+| 0.6     | Octubre 2026   | Lo que cambia por región en un caso lo pone el framework (HU-03)                                                                                                                              |
+| 0.7     | Noviembre 2026 | La consulta informa la vencida como vencida (HU-08), otro monto pide otro recurso (HU-11), la base cuadra con lo que el caso esperaba (HU-01) y el README liga al paso a paso (HU-06) |
 
 ## 1. Visión
 
@@ -73,7 +74,7 @@ Como equipo de QA, quiero que los flujos de pago de cada integración corran sol
 
 - El súper, el banco y la wallet corren sus flujos completos: se crea la referencia, llegan la solicitud y el aviso, el banco también puede reversar y la wallet avisa con su webhook.
 - Cada paso dice qué esperaba, qué llegó y si cumplió.
-- La base tiene la última palabra: tiene que cuadrar con lo que la API confirmó durante el caso. Cada pago que la API aceptó tiene su movimiento, en el estado que le toca (confirmado, pendiente mientras corre la ventana del banco, o reversado), y un rechazo no agrega ninguno. Si no cuadra, el caso falla.
+- La base tiene la última palabra: tiene que cuadrar con lo que el caso esperaba y la API confirmó. Un pago que la API aceptó donde el caso esperaba un rechazo no cuenta, así que si quedó en la base, también falla ahí. Cada pago que cuenta tiene su movimiento, en el estado que le toca (confirmado, pendiente mientras corre la ventana del banco, o reversado), y un rechazo no agrega ninguno. Si no cuadra, el caso falla.
 - La revisión de la base corre al final de cada caso, aunque un paso haya fallado, y su resultado se ve sin cambiar el motivo principal.
 - Cada paso deja su evidencia real, sin credenciales a la vista. El que ejecuta guarda lo que se mandó y lo que contestó PayRef, o el error si no hubo respuesta. El que observa guarda lo que leyó de la base y la llamada que disparó la acción, si la hubo.
 - Con un solo comando, `npm test`, corren las tres integraciones una por una, cada una como su propia corrida. Corren las tres aunque una falle, y el comando termina con error si algún caso salió Fallido o No concluido.
@@ -112,7 +113,7 @@ Como equipo de QA, quiero correr las integraciones contra una versión de PayRef
 - Contra la 1.0, cada bug hace fallar al menos un caso en la comprobación que le toca, y el reporte lo enseña como Fallido, con su motivo.
 - Un timeout o un error del framework no cuentan como bug atrapado.
 - Los docs dicen qué caso atrapa cada bug.
-- `npm run test:1.0` corre esta demo con un solo comando.
+- `npm run test:bugs` corre esta demo con un solo comando.
 
 **HU-05 Leer el reporte de la corrida** · Must
 
@@ -136,7 +137,7 @@ Como revisor técnico, quiero clonar el repo y correrlo con pocos pasos, para en
 
 - Con Node 24 y Docker, `npm install` y `npm test` bastan para correr todo. Si no hay `.env`, se usan los valores de prueba de `.env.example`.
 - Antes de los casos, una revisión rápida confirma que la base, PayRef y la wallet responden. Si Docker no está prendido, un puerto está ocupado o algo no responde, la corrida no empieza y dice qué falta.
-- El README explica cómo correrlo, qué atrapa la versión con bugs y cómo está armado, y trae el paso a paso para agregar una integración y un caso. Ese paso a paso se comprueba siguiéndolo al pie de la letra para agregar una integración de prueba, sin ayuda.
+- El README explica cómo correrlo, qué atrapa la versión con bugs y cómo está armado, y liga al paso a paso para agregar una integración y un caso. Ese paso a paso se comprueba siguiéndolo al pie de la letra para agregar una integración de prueba, sin ayuda.
 - `npm run verify` revisa formato, lint, tipos y las pruebas del framework, sin Docker.
 
 **HU-12 Probar el aviso aunque el tercero no lo mande** · Must
@@ -177,7 +178,7 @@ Como merchant, quiero crear referencias de pago, consultarlas y cancelarlas, par
 Como payment method estándar, por ejemplo un súper, quiero consultar una referencia y avisar el pago cuando el cliente ya pagó, para que el pago quede registrado en el orquestador.
 
 - Entra con su propia llave y recibe un token.
-- Puede consultar la referencia antes de cobrar, si su integración consulta. La consulta solo informa: responde los datos de la referencia y su estado, o R-101 si no existe, sin validar el negocio y sin registrar nada.
+- Puede consultar la referencia antes de cobrar, si su integración consulta. La consulta solo informa: responde los datos de la referencia y su estado, también vencida, o R-101 si no existe, sin validar el negocio y sin registrar nada.
 - Manda la solicitud y el aviso, juntos o por separado según su configuración. La solicitud, o la llamada que junta las dos, trae su secuencia y recibe folio y autorización si la referencia aplica. Por separado, el aviso trae el folio de su solicitud.
 - La solicitud valida siempre, por su cuenta, se haya consultado o no.
 - Si la referencia no aplica (no existe, está vencida, cancelada o ya pagada, o el monto no es válido), recibe el código de rechazo que corresponde.
@@ -215,7 +216,7 @@ Como banco que prende la ventana de reverso en su configuración, quiero validar
 Como wallet, un payment method digital, quiero generar un QR o link de pago y avisar con un webhook firmado cuando el cliente paga, para que el cliente pague desde su app y el pago quede registrado en el orquestador.
 
 - El merchant pide el QR o link con su token. Antes de pedírselo a la wallet, PayRef valida igual que en una solicitud estándar: primero lo que permite el merchant, que es la referencia, y después los topes del payment method. Si no aplica, responde el rechazo de negocio.
-- El recurso es de un solo pago: mientras no se paga, pedirlo otra vez regresa el mismo. Ya pagado, una recurrente recibe uno nuevo, y una única responde R-102.
+- El recurso es de un solo pago y de un solo monto: mientras no se paga, pedirlo otra vez con el mismo monto regresa el mismo, y con otro monto da uno nuevo. Ya pagado, una recurrente recibe uno nuevo, y una única responde R-102.
 - El webhook viaja firmado. Si la firma falta o no cuadra, se rechaza con 401 y no se registra nada.
 - Al llegar el webhook, PayRef vuelve a validar todo, por si algo cambió: si la referencia se venció o se canceló en medio, se rechaza y no se registra el pago.
 - El webhook se liga al recurso por el id que le dio la wallet, nunca por la referencia.
@@ -235,11 +236,11 @@ Lo extra es de cada integración, no de todos los bancos ni de todas las wallets
 | RNF-05 | Ninguna evidencia guarda credenciales completas: el header `Authorization`, la llave y el token del auth salen ocultos. La firma del webhook queda visible, porque solo sirve para su propia petición, y el secreto nunca viaja | Prueba del framework sobre el enmascarado                                                                     |
 | RNF-06 | Las credenciales del repo son de prueba: viven en `.env.example`, y el `.env` nunca se sube                                                                                                                                     | Revisión del repo y de `.gitignore`                                                                           |
 | RNF-07 | Los casos son independientes: cada uno crea sus datos, y un caso suelto sale igual que dentro de la corrida completa                                                                                                            | Correr un caso solo y en la corrida completa                                                                  |
-| RNF-08 | Ninguna prueba espera tiempo real: los casos de tiempo usan la hora de prueba                                                                                                                                                   | Regla de ESLint contra las esperas fijas                                                                      |
+| RNF-08 | Ninguna prueba espera tiempo real: los casos de tiempo usan la hora de prueba                                                                                                                                                   | Regla de ESLint en las pruebas, y el code review en lo demás                                                  |
 | RNF-09 | La corrida completa de una integración tarda menos de 5 minutos, con la imagen de MySQL ya descargada                                                                                                                           | Duración en el reporte. La primera corrida puede tardar más, y el README lo avisa                             |
 | RNF-10 | Las corridas no se pisan: cada una guarda sus archivos aparte                                                                                                                                                                   | Correr dos veces y comparar las carpetas                                                                      |
 | RNF-11 | El framework solo lee la base de PayRef, con un usuario de solo lectura                                                                                                                                                         | Antes de cada corrida, la revisión rápida intenta escribir con ese usuario, y si puede, la corrida no empieza |
-| RNF-12 | Las pruebas dan siempre el mismo resultado: las nuevas corren 3 veces seguidas y salen igual las tres                                                                                                                           | `--repeat-each=3` al cerrar cada fase                                                                         |
+| RNF-12 | Las pruebas dan siempre el mismo resultado: las nuevas corren 3 veces seguidas y salen igual las tres                                                                                                                           | Tres corridas seguidas con `CI=1` al cerrar cada fase                                                         |
 
 ## 7. Definición de terminado
 

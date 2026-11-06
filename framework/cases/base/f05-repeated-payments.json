@@ -15,8 +15,7 @@
     "reference": { "type": "recurring", "amountType": "fixed" },
     "secondSequence": "same",
     "objective": { "step": "second-payment", "expect": "R-106" },
-    "tags": ["hu-02", "hu-09"],
-    "notes": "PayRef 1.0 registers it as another payment: that is its bug 1."
+    "tags": ["hu-02", "hu-09"]
   },
   {
     "id": "F05-03",

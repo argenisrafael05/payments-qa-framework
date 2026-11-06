@@ -10,8 +10,7 @@
     },
     "time": "2026-11-15T23:59:59",
     "objective": { "step": "notice", "expect": "OK" },
-    "tags": ["hu-02", "hu-09"],
-    "notes": "PayRef 1.0 takes it as expired a day early: that is its bug 3."
+    "tags": ["hu-02", "hu-09"]
   },
   {
     "id": "F06-02",
@@ -39,5 +38,19 @@
     "objective": { "step": "notice", "expect": "OK" },
     "tags": ["hu-02", "hu-09"],
     "notes": "At 23:30 in Mexico it is already the next day in UTC."
+  },
+  {
+    "id": "F06-04",
+    "title": "The inquiry tells an expired reference as expired",
+    "flow": "transition",
+    "from": "expired",
+    "reference": {
+      "type": "single",
+      "amountType": "fixed",
+      "expiresOn": "2026-11-15"
+    },
+    "time": "2026-11-20T12:00:00",
+    "objective": { "step": "inquiry", "expect": "OK" },
+    "tags": ["hu-08"]
   }
 ]

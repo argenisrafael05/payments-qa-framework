@@ -5,6 +5,7 @@ import type { CaseRecord } from "../../framework/engine/evidence.ts";
 import { renderReport, writeReport } from "../../framework/engine/report.ts";
 import {
   caseFile,
+  caseName,
   runFile,
   writeJson,
   type RunRecord,
@@ -104,6 +105,17 @@ function records(...saved: CaseRecord[]): Map<string, CaseRecord | undefined> {
     ]),
   );
 }
+
+describe("the name of a test in the files of its run", () => {
+  it("keeps each repetition apart, so a later one never hides a failure", () => {
+    expect(caseName("F01-01__wallet__single-fixed", 0)).toBe(
+      "F01-01__wallet__single-fixed",
+    );
+    expect(caseName("F01-01__wallet__single-fixed", 2)).toBe(
+      "F01-01__wallet__single-fixed__repeat-3",
+    );
+  });
+});
 
 describe("the report of a run", () => {
   it("shows the summary first, with the totals of the files of the run", () => {

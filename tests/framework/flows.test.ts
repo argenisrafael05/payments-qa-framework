@@ -1,5 +1,11 @@
+import { join } from "node:path";
+import type { Pool } from "mysql2/promise";
 import { describe, expect, it } from "vitest";
+import { Recorder } from "../../framework/engine/evidence.ts";
+import { Http } from "../../framework/engine/http.ts";
 import { casesFor } from "../../framework/payments/catalog.ts";
+import { createContext } from "../../framework/payments/context.ts";
+import type { Environment } from "../../framework/payments/environment.ts";
 import { planFor } from "../../framework/payments/execution.ts";
 import { flowOf } from "../../framework/payments/flows/payment.ts";
 import { loadIntegration } from "../../framework/payments/integrations.ts";
@@ -8,6 +14,7 @@ import {
   inquiryOfUnknown,
   reversal,
 } from "../../framework/payments/steps/payments.ts";
+import { reply, scripted, temporaryDirectory } from "./builders.ts";
 
 // The flows and what each step expects, without PayRef.
 
@@ -73,6 +80,12 @@ describe("the flows", () => {
       "merchant-token",
       "create-reference",
       "view",
+    ]);
+    expect(names("expired", "inquiry")).toEqual([
+      "merchant-token",
+      "create-reference",
+      "payment-method-token",
+      "inquiry",
     ]);
   });
 
@@ -309,7 +322,7 @@ describe("the caller of the objective", () => {
       }).map((step) => step.title),
     ).toEqual([
       "The merchant gets its token",
-      "The merchant creates the reference, without a token",
+      "The merchant creates the reference, without a token, and with its body cut",
     ]);
     expect(
       stepsOf({
@@ -319,7 +332,110 @@ describe("the caller of the objective", () => {
   });
 });
 
+describe("the credential goes first", () => {
+  const environment = {
+    merchant: { id: "merchant", key: "merchant-key" },
+    paymentMethod: { id: "payment-method", key: "its-key" },
+  } as Environment;
+
+  // The request the objective of a case sends, with a transport that only answers it.
+  async function requestOf(
+    id: string,
+    changes: object,
+    prepare: (context: ReturnType<typeof createContext>) => void,
+  ) {
+    const integration = loadIntegration(id);
+    const [entry] = casesFor(integration, [
+      {
+        id: "F99-01",
+        title: "A case",
+        flow: "payment",
+        reference: { type: "single", amountType: "fixed" },
+        tags: [],
+        ...changes,
+      } as never,
+    ]);
+    if (entry === undefined) {
+      throw new Error("The case has no test");
+    }
+    const transport = scripted([reply(401, { message: "No" })]);
+    const context = createContext({
+      http: new Http({
+        transport,
+        baseUrl: "http://payref.test",
+        recorder: new Recorder(join(temporaryDirectory(), "case.json"), {
+          name: "case",
+          integration: id,
+          variation: "base",
+          case: {},
+        }),
+      }),
+      db: {} as Pool,
+      environment,
+      reference: entry.reference,
+      amount: entry.amount,
+      integration: id,
+    });
+    prepare(context);
+    await planFor(entry, integration).steps.at(-1)?.run(context);
+    const [request] = transport.requests;
+    if (request === undefined) {
+      throw new Error("The objective sent nothing");
+    }
+    return request;
+  }
+
+  it("calls without a token and with its body cut, so only a credential checked first gives 401", async () => {
+    const request = await requestOf(
+      "supermarket",
+      { objective: { step: "create", expect: 401, caller: "no-token" } },
+      (context) => {
+        context.tokens.merchant = "its-token";
+      },
+    );
+    expect(request.headers.authorization).toBeUndefined();
+    expect(() => JSON.parse(request.body ?? "")).toThrow();
+  });
+
+  it("sends a webhook without its signature and with its body cut, for the same reason", async () => {
+    const request = await requestOf(
+      "wallet",
+      { objective: { step: "notice", expect: 401, caller: "unsigned" } },
+      (context) => {
+        context.resource = { id: "wq_1" };
+      },
+    );
+    expect(request.headers).not.toHaveProperty("x-wallet-signature");
+    expect(() => JSON.parse(request.body ?? "")).toThrow();
+  });
+});
+
 describe("the inquiry", () => {
+  it("reports the state of an expired reference, and it stops nothing", () => {
+    const [entry] = casesFor(supermarket, [
+      {
+        id: "F99-01",
+        title: "A case",
+        flow: "transition",
+        from: "expired",
+        reference: {
+          type: "single",
+          amountType: "fixed",
+          expiresOn: "2026-11-15",
+        },
+        time: "2026-11-20T12:00:00",
+        objective: { step: "inquiry", expect: "OK" },
+        tags: [],
+      } as never,
+    ]);
+    if (entry === undefined) {
+      throw new Error("The case has no test");
+    }
+    const plan = planFor(entry, supermarket);
+    expect(plan.objective).toEqual({ kind: "success", state: "expired" });
+    expect(plan.steps.at(-1)?.name).toBe("inquiry");
+  });
+
   it("tells a code nobody created, whatever the payment after it expects", () => {
     expect(inquiryOfUnknown.expects?.({ kind: "status", status: 401 })).toEqual(
       { kind: "code", code: "R-101" },

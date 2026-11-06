@@ -96,7 +96,7 @@ describe("the catalog crossed with each integration", () => {
     const integration = creditUnion();
     const entries = casesFor(integration);
     const window = entries.filter((entry) => entry.case.id.startsWith("F07"));
-    expect(window).toHaveLength(22);
+    expect(window).toHaveLength(24);
     expect(window.every((entry) => entry.notApplicable === undefined)).toBe(
       true,
     );
@@ -120,7 +120,7 @@ describe("the catalog crossed with each integration", () => {
   it("leaves the window out of an integration without it, and runs its 403 there", () => {
     const entries = casesFor(kiosk());
     const window = entries.filter((entry) => entry.case.id.startsWith("F07"));
-    expect(window).toHaveLength(22);
+    expect(window).toHaveLength(24);
     expect(new Set(window.map((entry) => entry.notApplicable))).toEqual(
       new Set(["Kiosk has no reversal window, so the case does not apply"]),
     );
@@ -153,6 +153,10 @@ describe("the catalog crossed with each integration", () => {
     const noWebhook = "Bank has no webhook, so the case does not apply";
     expect(notApplicable("bank")).toEqual(
       new Map([
+        [
+          "F06-04",
+          "Bank does not inquire before it pays, so the case does not apply",
+        ],
         ["F08-01", noWebhook],
         ["F08-02", noWebhook],
         ["F08-03", noWebhook],
@@ -160,6 +164,7 @@ describe("the catalog crossed with each integration", () => {
         ["F08-05", noWebhook],
         ["F08-06", noWebhook],
         ["F09-01", "Bank has no payment resource, so the case does not apply"],
+        ["F09-02", "Bank has no payment resource, so the case does not apply"],
         ["F10-14", "Bank has no payment resource, so the case does not apply"],
         ["F11-06", "Bank has the reversal, so the case does not apply"],
       ]),
@@ -175,6 +180,7 @@ describe("the catalog crossed with each integration", () => {
       "F08-05",
       "F08-06",
       "F09-01",
+      "F09-02",
       "F10-14",
     ]);
     expect(supermarket.get("F07-01")).toBe(

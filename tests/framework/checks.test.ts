@@ -96,7 +96,7 @@ describe("the payment resource of a reference", () => {
   it("finds one resource when the merchant asked twice for an unpaid reference", async () => {
     expect(await sameResource.run(askedFor("wq_1", "wq_1"))).toMatchObject({
       result: "match",
-      expected: "1 resource: wq_1",
+      expected: "1 resource, the last one wq_1",
       found: "1 resource: wq_1",
     });
   });
@@ -104,8 +104,20 @@ describe("the payment resource of a reference", () => {
   it("finds a second resource the bridge should not have made", async () => {
     expect(await sameResource.run(askedFor("wq_1", "wq_2"))).toMatchObject({
       result: "mismatch",
-      expected: "1 resource: wq_2",
+      expected: "1 resource, the last one wq_2",
       found: "2 resources: wq_1, wq_2",
+    });
+  });
+
+  it("finds a new resource when the merchant asked with another amount", async () => {
+    const anotherResource = extraChecks["another-resource"];
+    expect(await anotherResource.run(askedFor("wq_1", "wq_2"))).toMatchObject({
+      result: "match",
+    });
+    expect(await anotherResource.run(askedFor("wq_1", "wq_1"))).toMatchObject({
+      result: "mismatch",
+      expected: "2 resources, the last one wq_1",
+      found: "1 resource: wq_1",
     });
   });
 });

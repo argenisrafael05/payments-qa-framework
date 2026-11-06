@@ -39,6 +39,7 @@ export const test = base.extend<{ cases: Cases }, { run: RunSetup; db: Pool }>({
           run,
           db,
           transport: playwrightTransport(request),
+          repeat: testInfo.repeatEachIndex,
         });
         return execution.done;
       },

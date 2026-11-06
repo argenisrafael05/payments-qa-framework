@@ -15,6 +15,7 @@ import {
   type DatabaseCheck,
   type Step,
 } from "../../framework/engine/runner.ts";
+import { UnexpectedResponse } from "../../framework/engine/results.ts";
 import { reply, scripted, temporaryDirectory } from "./builders.ts";
 
 // The runner with steps and checks of its own: no PayRef and no database.
@@ -152,13 +153,13 @@ describe("the runner", () => {
   it("only adds the line of the final check after a failure", async () => {
     const final = check("final", {
       result: "mismatch",
-      detail: "MX-0000000001 is confirmed, and the API never confirmed it",
+      detail: "MX-0000000001 is confirmed, and the case did not expect it",
     });
     const { recorder, context } = setup(scripted([reply(200, { code: "OK" })]));
     const record = await runCase(plan(["a"], { final }), context, recorder);
     expect(record.reason).toBe("a: expected R-103, got OK");
     expect(record.problems[1]?.reason).toBe(
-      "final: MX-0000000001 is confirmed, and the API never confirmed it",
+      "final: MX-0000000001 is confirmed, and the case did not expect it",
     );
   });
 
@@ -176,6 +177,36 @@ describe("the runner", () => {
     expect(record.reason).toBe("extra: expected paid, got active");
   });
 
+  it("keeps only what the case expected, so a wrong OK does not count for the database", async () => {
+    const kept: string[] = [];
+    const paying: Step<Context> = {
+      ...step("a"),
+      keep: () => {
+        kept.push("a");
+      },
+    };
+    const runWith = (objective: CasePlan<Context>["objective"]) => {
+      const { recorder, context } = setup(
+        scripted([reply(200, { code: "OK" })]),
+      );
+      return runCase(
+        {
+          steps: [paying],
+          objective,
+          checks: [],
+          finalCheck: check("final", { result: "match" }),
+        },
+        context,
+        recorder,
+      );
+    };
+    const expectedARejection = await runWith({ kind: "code", code: "R-101" });
+    expect(expectedARejection.result).toBe("failed");
+    expect(kept).toEqual([]);
+    await runWith({ kind: "success" });
+    expect(kept).toEqual(["a"]);
+  });
+
   it("takes a step that throws as a framework error, and still runs the final check", async () => {
     const final = check("final", { result: "match" });
     const { recorder, context } = setup(scripted([]));
@@ -184,6 +215,30 @@ describe("the runner", () => {
     expect(record.reason).toBe(
       "framework error: No answer left for POST http://payref.test/a",
     );
+    expect(final.runs).toBe(1);
+  });
+
+  it("takes a response that does not fit the case as failed, not as an error of the framework", async () => {
+    const final = check("final", { result: "match" });
+    const { recorder, context } = setup(scripted([reply(200, { code: "OK" })]));
+    const withOtherFolio: Step<Context> = {
+      ...step("a"),
+      keep: () => {
+        throw new UnexpectedResponse("answered MX-2, a folio nobody asked for");
+      },
+    };
+    const record = await runCase(
+      {
+        steps: [withOtherFolio],
+        objective: { kind: "success" },
+        checks: [],
+        finalCheck: final,
+      },
+      context,
+      recorder,
+    );
+    expect(record.result).toBe("failed");
+    expect(record.reason).toBe("a: answered MX-2, a folio nobody asked for");
     expect(final.runs).toBe(1);
   });
 

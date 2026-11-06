@@ -1,13 +1,19 @@
 import type { CheckOutcome, DatabaseCheck } from "../../engine/runner.ts";
 import type { ExpectedPayment, PaymentContext } from "../context.ts";
-import { movementsOf, unavailable, type Movement } from "./readings.ts";
+import {
+  bridgeLogOf,
+  movementsOf,
+  unavailable,
+  type Movement,
+} from "./readings.ts";
 
 // The database has the last word (HU-01): the movements of the reference must match what the
-// API answered, no more and no less. It runs once at the end of every case, also after a
-// failure, because the most expensive bug is an error that still left the payment.
+// case expected and the API confirmed, no more and no less. It runs once at the end of every
+// case, also after a failure, because the most expensive bug is an error that still left the
+// payment.
 export const finalCheck: DatabaseCheck<PaymentContext> = {
   name: "final-check",
-  title: "The movements match what the API confirmed",
+  title: "The movements match what the case expected and the API confirmed",
   async run(context) {
     const reference = context.created?.code;
     if (reference === undefined) {
@@ -24,15 +30,20 @@ export const finalCheck: DatabaseCheck<PaymentContext> = {
     } catch (error) {
       return unavailable("The movements of the reference", error);
     }
+    // A third party also leaves the log of its bridge, as a photo in the evidence (3.1).
+    const log =
+      context.simulator === undefined
+        ? []
+        : [await bridgeLogOf(context.db, reference)];
     return {
       ...compareMovements(context.payments, read.movements),
-      readings: [read.reading],
+      readings: [read.reading, ...log],
     };
   },
 };
 
-// No more and no less: every payment the API answered is there, in the state it left it, and no
-// movement is there that the API never confirmed. A payment its window confirmed keeps the time
+// No more and no less: every payment that counts is there, in the state the API left it, and no
+// movement is there that the case did not expect. A payment its window confirmed keeps the time
 // the window ended.
 export function compareMovements(
   payments: readonly ExpectedPayment[],
@@ -56,6 +67,14 @@ export function compareMovements(
     ) {
       differences.push(
         `${payment.folio} was confirmed at ${movement.confirmedAt ?? "no time"}, and its window ended at ${payment.confirmedAt}`,
+      );
+    }
+    if (
+      payment.requestedAt !== undefined &&
+      movement.requestedAt !== payment.requestedAt
+    ) {
+      differences.push(
+        `${payment.folio} keeps its request at ${movement.requestedAt ?? "no time"}, and it came at ${payment.requestedAt}`,
       );
     }
     // The exact amount: comparing with two decimals would hide an amount the database rounded.
@@ -84,7 +103,7 @@ export function compareMovements(
   for (const movement of movements) {
     if (!payments.some((payment) => payment.folio === movement.folio)) {
       differences.push(
-        `${movement.folio ?? "a movement without a folio"} is ${movement.status}, and the API never confirmed it`,
+        `${movement.folio ?? "a movement without a folio"} is ${movement.status}, and the case did not expect it`,
       );
     }
   }

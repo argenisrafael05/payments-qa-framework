@@ -53,10 +53,16 @@ export function checkProblem(
   }
 }
 
-// An error of the framework itself never counts as a bug of PayRef (8.5).
-export function frameworkProblem(error: unknown): Problem {
+// A response that reads as a success and does not fit the case, like a folio nobody asked for.
+export class UnexpectedResponse extends Error {}
+
+// An error of the framework itself never counts as a bug of PayRef (8.5). What the system
+// answered does.
+export function frameworkProblem(error: unknown, step?: string): Problem {
   const message = error instanceof Error ? error.message : String(error);
-  return { result: "inconclusive", reason: `framework error: ${message}` };
+  return error instanceof UnexpectedResponse
+    ? { result: "failed", reason: `${step}: ${message}` }
+    : { result: "inconclusive", reason: `framework error: ${message}` };
 }
 
 export type Decision = {
