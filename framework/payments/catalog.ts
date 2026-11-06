@@ -118,8 +118,6 @@ const caseSchema = z.strictObject({
   }),
   tags: z.array(z.string().regex(/^[a-z][a-z0-9-]*$/)),
   checks: z.array(z.enum(extraCheckNames)).optional(),
-  // A case with a rule still pending does not run, and says why (8.5).
-  blocked: z.string().min(1).optional(),
   notes: z.string().optional(),
 });
 

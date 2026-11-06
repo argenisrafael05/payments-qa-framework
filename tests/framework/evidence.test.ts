@@ -480,11 +480,11 @@ describe("the evidence", () => {
 
   it("keeps the reason of a case that never started", () => {
     const directory = temporaryDirectory();
-    recorderIn(directory).notRun("blocked: the rule is pending");
+    recorderIn(directory).notRun("the case does not apply");
     expect(saved(directory)).toMatchObject({
       status: "finished",
       result: "not_run",
-      reason: "blocked: the rule is pending",
+      reason: "the case does not apply",
       approved: false,
     });
   });
